@@ -1,11 +1,18 @@
 package glfw
 
 import (
+	"fmt"
 	"image"
+	"io"
+	"strings"
 	"sync"
 	"unsafe"
 
 	"github.com/kanryu/mado"
+	"github.com/kanryu/mado/app"
+	"github.com/kanryu/mado/io/clipboard"
+	"github.com/kanryu/mado/io/key"
+	"github.com/kanryu/mado/io/system"
 )
 
 // Internal window list stuff
@@ -19,7 +26,7 @@ var windows = windowList{m: map[*mado.Window]*Window{}}
 func (w *windowList) put(wnd *Window) {
 	w.l.Lock()
 	defer w.l.Unlock()
-	w.m[wnd.win] = wnd
+	w.m[wnd.data] = wnd
 }
 
 func (w *windowList) remove(wnd *mado.Window) {
@@ -153,7 +160,10 @@ const (
 
 // Window represents a window.
 type Window struct {
-	win *mado.Window
+	data    *mado.Window
+	pointer unsafe.Pointer
+
+	shouldClose bool
 
 	// Window.
 	fPosHolder             func(w *Window, xpos int, ypos int)
@@ -194,115 +204,6 @@ type Window struct {
 	fDropHolder        func(w *Window, names []string)
 }
 
-// Handle returns a *C.GLFWwindow reference (i.e. the GLFW window itself).
-// This can be used for passing the GLFW window handle to external libraries
-// like vulkan-go.
-func (w *Window) Handle() unsafe.Pointer {
-	return unsafe.Pointer(w.win)
-}
-
-// GoWindow creates a Window from a *C.GLFWwindow reference.
-// Used when an external C library is calling your Go handlers.
-func GoWindow(window unsafe.Pointer) *Window {
-	return &Window{win: (*mado.Window)(window)}
-}
-
-//export goWindowPosCB
-func goWindowPosCB(window unsafe.Pointer, xpos, ypos C.int) {
-	w := windows.get((*mado.Window)(window))
-	w.fPosHolder(w, int(xpos), int(ypos))
-}
-
-//export goWindowSizeCB
-func goWindowSizeCB(window unsafe.Pointer, width, height C.int) {
-	w := windows.get((*mado.Window)(window))
-	w.fSizeHolder(w, int(width), int(height))
-}
-
-//export goFramebufferSizeCB
-func goFramebufferSizeCB(window unsafe.Pointer, width, height C.int) {
-	w := windows.get((*mado.Window)(window))
-	w.fFramebufferSizeHolder(w, int(width), int(height))
-}
-
-//export goWindowCloseCB
-func goWindowCloseCB(window unsafe.Pointer) {
-	w := windows.get((*mado.Window)(window))
-	w.fCloseHolder(w)
-}
-
-//export goWindowMaximizeCB
-func goWindowMaximizeCB(window unsafe.Pointer, maximized C.int) {
-	w := windows.get((*mado.Window)(window))
-	w.fMaximizeHolder(w, glfwbool(maximized))
-}
-
-//export goWindowRefreshCB
-func goWindowRefreshCB(window unsafe.Pointer) {
-	w := windows.get((*mado.Window)(window))
-	w.fRefreshHolder(w)
-}
-
-//export goWindowFocusCB
-func goWindowFocusCB(window unsafe.Pointer, focused C.int) {
-	w := windows.get((*mado.Window)(window))
-	isFocused := glfwbool(focused)
-	w.fFocusHolder(w, isFocused)
-}
-
-//export goWindowIconifyCB
-func goWindowIconifyCB(window unsafe.Pointer, iconified C.int) {
-	isIconified := glfwbool(iconified)
-	w := windows.get((*mado.Window)(window))
-	w.fIconifyHolder(w, isIconified)
-}
-
-//export goWindowContentScaleCB
-func goWindowContentScaleCB(window unsafe.Pointer, x C.float, y C.float) {
-	w := windows.get((*mado.Window)(window))
-	w.fContentScaleHolder(w, float32(x), float32(y))
-}
-
-// DefaultWindowHints resets all window hints to their default values.
-//
-// This function may only be called from the main thread.
-func DefaultWindowHints() {
-	C.glfwDefaultWindowHints()
-	panicError()
-}
-
-// WindowHint sets hints for the next call to CreateWindow. The hints,
-// once set, retain their values until changed by a call to WindowHint or
-// DefaultWindowHints, or until the library is terminated with Terminate.
-//
-// This function may only be called from the main thread.
-func WindowHint(target Hint, hint int) {
-	C.glfwWindowHint(C.int(target), C.int(hint))
-	panicError()
-}
-
-// WindowHintString sets hints for the next call to CreateWindow. The hints,
-// once set, retain their values until changed by a call to this function or
-// DefaultWindowHints, or until the library is terminated.
-//
-// Only string type hints can be set with this function. Integer value hints are
-// set with WindowHint.
-//
-// This function does not check whether the specified hint values are valid. If
-// you set hints to invalid values this will instead be reported by the next
-// call to CreateWindow.
-//
-// Some hints are platform specific. These may be set on any platform but they
-// will only affect their specific platform. Other platforms will ignore them.
-// Setting these hints requires no platform specific headers or functions.
-//
-// This function must only be called from the main thread.
-func WindowHintString(hint Hint, value string) {
-	str := C.CString(value)
-	defer C.free(unsafe.Pointer(str))
-	C.glfwWindowHintString(C.int(hint), str)
-}
-
 // CreateWindow creates a window and its associated context. Most of the options
 // controlling how the window and its context should be created are specified
 // through Hint.
@@ -335,29 +236,17 @@ func WindowHintString(hint Hint, value string) {
 //
 // This function may only be called from the main thread.
 func CreateWindow(width, height int, title string, monitor *Monitor, share *Window) (*Window, error) {
-	var (
-		m *C.GLFWmonitor
-		s *C.GLFWwindow
-	)
-
-	t := C.CString(title)
-	defer C.free(unsafe.Pointer(t))
-
-	if monitor != nil {
-		m = monitor.data
+	w := mado.NewWindow()
+	w.Callbacks = &Callbacks{W: w}
+	state := &w.EventState
+	if err := app.NewWindow(w.Callbacks, state.InitialOpts); err != nil {
+		close(w.Destroy)
+		return nil, err
+		//return mado.DestroyEvent{Err: err}
 	}
-
-	if share != nil {
-		s = share.data
+	wnd := &Window{
+		data: w,
 	}
-
-	w := C.glfwCreateWindow(C.int(width), C.int(height), t, m, s)
-	if w == nil {
-		return nil, acceptError(APIUnavailable, VersionUnavailable)
-	}
-
-	wnd := &Window{data: w}
-	windows.put(wnd)
 	return wnd, nil
 }
 
@@ -367,26 +256,21 @@ func CreateWindow(width, height int, title string, monitor *Monitor, share *Wind
 // This function may only be called from the main thread.
 func (w *Window) Destroy() {
 	windows.remove(w.data)
-	C.glfwDestroyWindow(w.data)
+	w.data.Callbacks.Event(mado.DestroyEvent{Err: nil})
 	panicError()
 }
 
 // ShouldClose reports the value of the close flag of the specified window.
 func (w *Window) ShouldClose() bool {
-	ret := glfwbool(C.glfwWindowShouldClose(w.data))
 	panicError()
-	return ret
+	return w.shouldClose
 }
 
 // SetShouldClose sets the value of the close flag of the window. This can be
 // used to override the user's attempt to close the window, or to signal that it
 // should be closed.
 func (w *Window) SetShouldClose(value bool) {
-	if !value {
-		C.glfwSetWindowShouldClose(w.data, C.int(False))
-	} else {
-		C.glfwSetWindowShouldClose(w.data, C.int(True))
-	}
+	w.shouldClose = value
 	panicError()
 }
 
@@ -394,9 +278,8 @@ func (w *Window) SetShouldClose(value bool) {
 //
 // This function may only be called from the main thread.
 func (w *Window) SetTitle(title string) {
-	t := C.CString(title)
-	defer C.free(unsafe.Pointer(t))
-	C.glfwSetWindowTitle(w.data, t)
+	option := mado.Title(title)
+	w.data.Option(option)
 	panicError()
 }
 
@@ -413,23 +296,7 @@ func (w *Window) SetTitle(title string) {
 // The desired image sizes varies depending on platform and system settings. The selected
 // images will be rescaled as needed. Good sizes include 16x16, 32x32 and 48x48.
 func (w *Window) SetIcon(images []image.Image) {
-	count := len(images)
-	cimages := make([]C.GLFWimage, count)
-	freePixels := make([]func(), count)
-
-	for i, img := range images {
-		cimages[i], freePixels[i] = imageToGLFW(img)
-	}
-
-	var p *C.GLFWimage
-	if count > 0 {
-		p = &cimages[0]
-	}
-	C.glfwSetWindowIcon(w.data, C.int(count), p)
-
-	for _, v := range freePixels {
-		v()
-	}
+	fmt.Println("not implemented")
 
 	panicError()
 }
@@ -437,10 +304,9 @@ func (w *Window) SetIcon(images []image.Image) {
 // GetPos returns the position, in screen coordinates, of the upper-left
 // corner of the client area of the window.
 func (w *Window) GetPos() (x, y int) {
-	var xpos, ypos C.int
-	C.glfwGetWindowPos(w.data, &xpos, &ypos)
+	fmt.Println("not implemented")
 	panicError()
-	return int(xpos), int(ypos)
+	return int(0), int(0)
 }
 
 // SetPos sets the position, in screen coordinates, of the upper-left corner
@@ -458,17 +324,16 @@ func (w *Window) GetPos() (x, y int) {
 //
 // This function may only be called from the main thread.
 func (w *Window) SetPos(xpos, ypos int) {
-	C.glfwSetWindowPos(w.data, C.int(xpos), C.int(ypos))
+	fmt.Println("not implemented")
+	w.data.Perform(system.ActionCenter)
 	panicError()
 }
 
 // GetSize returns the size, in screen coordinates, of the client area of the
 // specified window.
 func (w *Window) GetSize() (width, height int) {
-	var wi, h C.int
-	C.glfwGetWindowSize(w.data, &wi, &h)
-	panicError()
-	return int(wi), int(h)
+	fmt.Println("not implemented")
+	return 800, 600
 }
 
 // SetSize sets the size, in screen coordinates, of the client area of the
@@ -482,7 +347,8 @@ func (w *Window) GetSize() (width, height int) {
 //
 // This function may only be called from the main thread.
 func (w *Window) SetSize(width, height int) {
-	C.glfwSetWindowSize(w.data, C.int(width), C.int(height))
+	fmt.Println("not implemented")
+	w.data.Perform(system.ActionCenter)
 	panicError()
 }
 
@@ -491,7 +357,7 @@ func (w *Window) SetSize(width, height int) {
 //
 // The size limits are applied immediately and may cause the window to be resized.
 func (w *Window) SetSizeLimits(minw, minh, maxw, maxh int) {
-	C.glfwSetWindowSizeLimits(w.data, C.int(minw), C.int(minh), C.int(maxw), C.int(maxh))
+	fmt.Println("not implemented")
 	panicError()
 }
 
@@ -505,17 +371,16 @@ func (w *Window) SetSizeLimits(minw, minh, maxw, maxh int) {
 //
 // The aspect ratio is applied immediately and may cause the window to be resized.
 func (w *Window) SetAspectRatio(numer, denom int) {
-	C.glfwSetWindowAspectRatio(w.data, C.int(numer), C.int(denom))
+	fmt.Println("not implemented")
 	panicError()
 }
 
 // GetFramebufferSize retrieves the size, in pixels, of the framebuffer of the
 // specified window.
 func (w *Window) GetFramebufferSize() (width, height int) {
-	var wi, h C.int
-	C.glfwGetFramebufferSize(w.data, &wi, &h)
+	fmt.Println("not implemented")
 	panicError()
-	return int(wi), int(h)
+	return 800, 600
 }
 
 // GetFrameSize retrieves the size, in screen coordinates, of each edge of the frame
@@ -525,10 +390,9 @@ func (w *Window) GetFramebufferSize() (width, height int) {
 // Because this function retrieves the size of each window frame edge and not the offset
 // along a particular coordinate axis, the retrieved values will always be zero or positive.
 func (w *Window) GetFrameSize() (left, top, right, bottom int) {
-	var l, t, r, b C.int
-	C.glfwGetWindowFrameSize(w.data, &l, &t, &r, &b)
+	fmt.Println("not implemented")
 	panicError()
-	return int(l), int(t), int(r), int(b)
+	return 0, 0, 800, 600
 }
 
 // GetContentScale function retrieves the content scale for the specified
@@ -539,9 +403,8 @@ func (w *Window) GetFrameSize() (left, top, right, bottom int) {
 //
 // This function may only be called from the main thread.
 func (w *Window) GetContentScale() (float32, float32) {
-	var x, y C.float
-	C.glfwGetWindowContentScale(w.data, &x, &y)
-	return float32(x), float32(y)
+	fmt.Println("not implemented")
+	return 800, 600
 }
 
 // GetOpacity function returns the opacity of the window, including any
@@ -555,7 +418,8 @@ func (w *Window) GetContentScale() (float32, float32) {
 //
 // This function may only be called from the main thread.
 func (w *Window) GetOpacity() float32 {
-	return float32(C.glfwGetWindowOpacity(w.data))
+	fmt.Println("not implemented")
+	return 1.0
 }
 
 // SetOpacity function sets the opacity of the window, including any
@@ -569,7 +433,7 @@ func (w *Window) GetOpacity() float32 {
 //
 // This function may only be called from the main thread.
 func (w *Window) SetOpacity(opacity float32) {
-	C.glfwSetWindowOpacity(w.data, C.float(opacity))
+	fmt.Println("not implemented")
 }
 
 // RequestWindowAttention funciton requests user attention to the specified
@@ -581,7 +445,7 @@ func (w *Window) SetOpacity(opacity float32) {
 //
 // This function must only be called from the main thread.
 func (w *Window) RequestAttention() {
-	C.glfwRequestWindowAttention(w.data)
+	fmt.Println("not implemented")
 }
 
 // Focus brings the specified window to front and sets input focus.
@@ -593,7 +457,7 @@ func (w *Window) RequestAttention() {
 // Do not use this function to steal focus from other applications unless you are certain that
 // is what the user wants. Focus stealing can be extremely disruptive.
 func (w *Window) Focus() {
-	C.glfwFocusWindow(w.data)
+	w.data.Callbacks.Event(key.FocusEvent{Focus: true})
 }
 
 // Iconify iconifies/minimizes the window, if it was previously restored. If it
@@ -603,7 +467,7 @@ func (w *Window) Focus() {
 //
 // This function may only be called from the main thread.
 func (w *Window) Iconify() {
-	C.glfwIconifyWindow(w.data)
+	w.data.Perform(system.ActionMinimize)
 }
 
 // Maximize maximizes the specified window if it was previously not maximized.
@@ -611,7 +475,7 @@ func (w *Window) Iconify() {
 //
 // If the specified window is a full screen window, this function does nothing.
 func (w *Window) Maximize() {
-	C.glfwMaximizeWindow(w.data)
+	w.data.Perform(system.ActionMaximize)
 }
 
 // Restore restores the window, if it was previously iconified/minimized. If it
@@ -621,7 +485,7 @@ func (w *Window) Maximize() {
 //
 // This function may only be called from the main thread.
 func (w *Window) Restore() {
-	C.glfwRestoreWindow(w.data)
+	w.data.Wakeup()
 }
 
 // Show makes the window visible, if it was previously hidden. If the window is
@@ -629,7 +493,7 @@ func (w *Window) Restore() {
 //
 // This function may only be called from the main thread.
 func (w *Window) Show() {
-	C.glfwShowWindow(w.data)
+	w.data.Perform(system.ActionRaise)
 	panicError()
 }
 
@@ -638,7 +502,7 @@ func (w *Window) Show() {
 //
 // This function may only be called from the main thread.
 func (w *Window) Hide() {
-	C.glfwHideWindow(w.data)
+	fmt.Println("not implemented")
 	panicError()
 }
 
@@ -647,12 +511,8 @@ func (w *Window) Hide() {
 //
 // Returns nil if the window is in windowed mode.
 func (w *Window) GetMonitor() *Monitor {
-	m := C.glfwGetWindowMonitor(w.data)
-	panicError()
-	if m == nil {
-		return nil
-	}
-	return &Monitor{m}
+	fmt.Println("not implemented")
+	return nil
 }
 
 // SetMonitor sets the monitor that the window uses for full screen mode or,
@@ -671,22 +531,16 @@ func (w *Window) GetMonitor() *Monitor {
 // restores any previous window settings such as whether it is decorated, floating,
 // resizable, has size or aspect ratio limits, etc..
 func (w *Window) SetMonitor(monitor *Monitor, xpos, ypos, width, height, refreshRate int) {
-	var m *C.GLFWmonitor
-	if monitor == nil {
-		m = nil
-	} else {
-		m = monitor.data
-	}
-	C.glfwSetWindowMonitor(w.data, m, C.int(xpos), C.int(ypos), C.int(width), C.int(height), C.int(refreshRate))
+	fmt.Println("not implemented")
 	panicError()
 }
 
 // GetAttrib returns an attribute of the window. There are many attributes,
 // some related to the window and others to its context.
 func (w *Window) GetAttrib(attrib Hint) int {
-	ret := int(C.glfwGetWindowAttrib(w.data, C.int(attrib)))
+	fmt.Println("not implemented")
 	panicError()
-	return ret
+	return 0
 }
 
 // SetAttrib function sets the value of an attribute of the specified window.
@@ -701,20 +555,20 @@ func (w *Window) GetAttrib(attrib Hint) int {
 //
 // This function may only be called from the main thread.
 func (w *Window) SetAttrib(attrib Hint, value int) {
-	C.glfwSetWindowAttrib(w.data, C.int(attrib), C.int(value))
+	fmt.Println("not implemented")
 }
 
 // SetUserPointer sets the user-defined pointer of the window. The current value
 // is retained until the window is destroyed. The initial value is nil.
 func (w *Window) SetUserPointer(pointer unsafe.Pointer) {
-	C.glfwSetWindowUserPointer(w.data, pointer)
+	w.pointer = pointer
 	panicError()
 }
 
 // GetUserPointer returns the current value of the user-defined pointer of the
 // window. The initial value is nil.
 func (w *Window) GetUserPointer() unsafe.Pointer {
-	ret := C.glfwGetWindowUserPointer(w.data)
+	ret := w.pointer
 	panicError()
 	return ret
 }
@@ -728,11 +582,6 @@ type PosCallback func(w *Window, xpos int, ypos int)
 func (w *Window) SetPosCallback(cbfun PosCallback) (previous PosCallback) {
 	previous = w.fPosHolder
 	w.fPosHolder = cbfun
-	if cbfun == nil {
-		C.glfwSetWindowPosCallback(w.data, nil)
-	} else {
-		C.glfwSetWindowPosCallbackCB(w.data)
-	}
 	panicError()
 	return previous
 }
@@ -746,11 +595,6 @@ type SizeCallback func(w *Window, width int, height int)
 func (w *Window) SetSizeCallback(cbfun SizeCallback) (previous SizeCallback) {
 	previous = w.fSizeHolder
 	w.fSizeHolder = cbfun
-	if cbfun == nil {
-		C.glfwSetWindowSizeCallback(w.data, nil)
-	} else {
-		C.glfwSetWindowSizeCallbackCB(w.data)
-	}
 	panicError()
 	return previous
 }
@@ -763,11 +607,6 @@ type FramebufferSizeCallback func(w *Window, width int, height int)
 func (w *Window) SetFramebufferSizeCallback(cbfun FramebufferSizeCallback) (previous FramebufferSizeCallback) {
 	previous = w.fFramebufferSizeHolder
 	w.fFramebufferSizeHolder = cbfun
-	if cbfun == nil {
-		C.glfwSetFramebufferSizeCallback(w.data, nil)
-	} else {
-		C.glfwSetFramebufferSizeCallbackCB(w.data)
-	}
 	panicError()
 	return previous
 }
@@ -787,11 +626,6 @@ type CloseCallback func(w *Window)
 func (w *Window) SetCloseCallback(cbfun CloseCallback) (previous CloseCallback) {
 	previous = w.fCloseHolder
 	w.fCloseHolder = cbfun
-	if cbfun == nil {
-		C.glfwSetWindowCloseCallback(w.data, nil)
-	} else {
-		C.glfwSetWindowCloseCallbackCB(w.data)
-	}
 	panicError()
 	return previous
 }
@@ -807,11 +641,6 @@ type MaximizeCallback func(w *Window, maximized bool)
 func (w *Window) SetMaximizeCallback(cbfun MaximizeCallback) MaximizeCallback {
 	previous := w.fMaximizeHolder
 	w.fMaximizeHolder = cbfun
-	if cbfun == nil {
-		C.glfwSetWindowMaximizeCallback(w.data, nil)
-	} else {
-		C.glfwSetWindowMaximizeCallbackCB(w.data)
-	}
 	return previous
 }
 
@@ -827,11 +656,6 @@ type ContentScaleCallback func(w *Window, x float32, y float32)
 func (w *Window) SetContentScaleCallback(cbfun ContentScaleCallback) ContentScaleCallback {
 	previous := w.fContentScaleHolder
 	w.fContentScaleHolder = cbfun
-	if cbfun == nil {
-		C.glfwSetWindowContentScaleCallback(w.data, nil)
-	} else {
-		C.glfwSetWindowContentScaleCallbackCB(w.data)
-	}
 	return previous
 }
 
@@ -848,11 +672,6 @@ type RefreshCallback func(w *Window)
 func (w *Window) SetRefreshCallback(cbfun RefreshCallback) (previous RefreshCallback) {
 	previous = w.fRefreshHolder
 	w.fRefreshHolder = cbfun
-	if cbfun == nil {
-		C.glfwSetWindowRefreshCallback(w.data, nil)
-	} else {
-		C.glfwSetWindowRefreshCallbackCB(w.data)
-	}
 	panicError()
 	return previous
 }
@@ -869,11 +688,6 @@ type FocusCallback func(w *Window, focused bool)
 func (w *Window) SetFocusCallback(cbfun FocusCallback) (previous FocusCallback) {
 	previous = w.fFocusHolder
 	w.fFocusHolder = cbfun
-	if cbfun == nil {
-		C.glfwSetWindowFocusCallback(w.data, nil)
-	} else {
-		C.glfwSetWindowFocusCallbackCB(w.data)
-	}
 	panicError()
 	return previous
 }
@@ -886,11 +700,6 @@ type IconifyCallback func(w *Window, iconified bool)
 func (w *Window) SetIconifyCallback(cbfun IconifyCallback) (previous IconifyCallback) {
 	previous = w.fIconifyHolder
 	w.fIconifyHolder = cbfun
-	if cbfun == nil {
-		C.glfwSetWindowIconifyCallback(w.data, nil)
-	} else {
-		C.glfwSetWindowIconifyCallbackCB(w.data)
-	}
 	panicError()
 	return previous
 }
@@ -903,9 +712,8 @@ func (w *Window) SetIconifyCallback(cbfun IconifyCallback) (previous IconifyCall
 //
 // This function may only be called from the main thread.
 func (w *Window) SetClipboardString(str string) {
-	cp := C.CString(str)
-	defer C.free(unsafe.Pointer(cp))
-	C.glfwSetClipboardString(w.data, cp)
+	gtx := w.data.Queue.Source()
+	gtx.Execute(clipboard.WriteCmd{Type: "application/text", Data: io.NopCloser(strings.NewReader(str))})
 	panicError()
 }
 
@@ -917,12 +725,11 @@ func (w *Window) SetClipboardString(str string) {
 //
 // This function may only be called from the main thread.
 func (w *Window) GetClipboardString() string {
-	cs := C.glfwGetClipboardString(w.data)
-	if cs == nil {
-		acceptError(FormatUnavailable)
-		return ""
-	}
-	return C.GoString(cs)
+	gtx := w.data.Queue.Source()
+	gtx.Execute(clipboard.ReadCmd{Tag: w})
+	// There is probably no way to retrieve the clipboard synchronously due to the current geoui design.
+	fmt.Println("not implemented")
+	return ""
 }
 
 // PollEvents processes only those events that have already been received and
@@ -935,7 +742,7 @@ func (w *Window) GetClipboardString() string {
 //
 // This function may only be called from the main thread.
 func PollEvents() {
-	C.glfwPollEvents()
+	fmt.Println("not implemented")
 	panicError()
 }
 
@@ -953,7 +760,7 @@ func PollEvents() {
 //
 // This function may only be called from the main thread.
 func WaitEvents() {
-	C.glfwWaitEvents()
+	fmt.Println("not implemented")
 	panicError()
 }
 
@@ -980,7 +787,7 @@ func WaitEvents() {
 //
 // Event processing is not required for joystick input to work.
 func WaitEventsTimeout(timeout float64) {
-	C.glfwWaitEventsTimeout(C.double(timeout))
+	fmt.Println("not implemented")
 	panicError()
 }
 
@@ -992,6 +799,6 @@ func WaitEventsTimeout(timeout float64) {
 //
 // This function may be called from secondary threads.
 func PostEmptyEvent() {
-	C.glfwPostEmptyEvent()
+	fmt.Println("not implemented")
 	panicError()
 }

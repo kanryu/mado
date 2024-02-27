@@ -18,6 +18,7 @@ import (
 
 	syscall "golang.org/x/sys/windows"
 
+	"github.com/kanryu/mado"
 	"github.com/kanryu/mado/app/internal/windows"
 	"github.com/kanryu/mado/unit"
 	gowindows "golang.org/x/sys/windows"
@@ -85,7 +86,7 @@ func osMain() {
 	select {}
 }
 
-func newWindow(window *callbacks, options []Option) error {
+func NewWindow(window *callbacks, options []Option) error {
 	cerr := make(chan error)
 	go func() {
 		// GetMessage and PeekMessage can filter on a window HWND, but
@@ -378,7 +379,7 @@ func windowProc(hwnd syscall.Handle, msg uint32, wParam, lParam uintptr) uintptr
 			return windows.TRUE
 		}
 	case _WM_WAKEUP:
-		w.w.Event(wakeupEvent{})
+		w.w.Event(mado.WakeupEvent{})
 	case windows.WM_IME_STARTCOMPOSITION:
 		imc := windows.ImmGetContext(w.hwnd)
 		if imc == 0 {

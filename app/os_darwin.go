@@ -48,6 +48,7 @@ import (
 	"unicode/utf16"
 	"unsafe"
 
+	"github.com/kanryu/mado"
 	"github.com/kanryu/mado/io/pointer"
 )
 
@@ -262,6 +263,6 @@ func windowSetCursor(from, to pointer.Cursor) pointer.Cursor {
 
 func (w *window) Wakeup() {
 	runOnMain(func() {
-		w.w.Event(wakeupEvent{})
+		w.w.Event(mado.WakeupEvent{})
 	})
 }

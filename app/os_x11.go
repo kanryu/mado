@@ -37,6 +37,7 @@ import (
 	"time"
 	"unsafe"
 
+	"github.com/kanryu/mado"
 	"github.com/kanryu/mado/f32"
 	"github.com/kanryu/mado/io/key"
 	"github.com/kanryu/mado/io/pointer"
@@ -454,7 +455,7 @@ loop:
 		}
 		select {
 		case <-w.wakeups:
-			w.w.Event(wakeupEvent{})
+			w.w.Event(mado.WakeupEvent{})
 		default:
 		}
 

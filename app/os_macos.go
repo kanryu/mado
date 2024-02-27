@@ -15,6 +15,7 @@ import (
 	"unicode"
 	"unicode/utf8"
 
+	"github.com/kanryu/mado"
 	"github.com/kanryu/mado/internal/f32"
 	"github.com/kanryu/mado/io/key"
 	"github.com/kanryu/mado/io/pointer"
@@ -246,9 +247,11 @@ type ViewEvent struct {
 	Layer uintptr
 }
 
+var _ mado.Driver = (*window)(nil)
+
 type window struct {
 	view        C.CFTypeRef
-	w           *callbacks
+	w           mado.Callbacks
 	stage       Stage
 	displayLink *displayLink
 	// redraw is a single entry channel for making sure only one
@@ -258,7 +261,7 @@ type window struct {
 	pointerBtns pointer.Buttons
 
 	scale  float32
-	config Config
+	config mado.Config
 }
 
 // viewMap is the mapping from Cocoa NSViews to Go windows.
@@ -324,65 +327,65 @@ func (w *window) WriteClipboard(mime string, s []byte) {
 func (w *window) updateWindowMode() {
 	style := int(C.getWindowStyleMask(C.windowForView(w.view)))
 	if style&C.NSWindowStyleMaskFullScreen != 0 {
-		w.config.Mode = Fullscreen
+		w.config.Mode = mado.Fullscreen
 	} else {
-		w.config.Mode = Windowed
+		w.config.Mode = mado.Windowed
 	}
 	w.config.Decorated = style&C.NSWindowStyleMaskFullSizeContentView == 0
 }
 
-func (w *window) Configure(options []Option) {
+func (w *window) Configure(options []mado.Option) {
 	screenScale := float32(C.getScreenBackingScale())
 	cfg := configFor(screenScale)
 	prev := w.config
 	w.updateWindowMode()
 	cnf := w.config
-	cnf.apply(cfg, options)
+	cnf.Apply(cfg, options)
 	window := C.windowForView(w.view)
 
 	switch cnf.Mode {
-	case Fullscreen:
+	case mado.Fullscreen:
 		switch prev.Mode {
-		case Fullscreen:
-		case Minimized:
+		case mado.Fullscreen:
+		case mado.Minimized:
 			C.unhideWindow(window)
 			fallthrough
 		default:
-			w.config.Mode = Fullscreen
+			w.config.Mode = mado.Fullscreen
 			C.toggleFullScreen(window)
 		}
-	case Minimized:
+	case mado.Minimized:
 		switch prev.Mode {
-		case Minimized, Fullscreen:
+		case mado.Minimized, mado.Fullscreen:
 		default:
-			w.config.Mode = Minimized
+			w.config.Mode = mado.Minimized
 			C.hideWindow(window)
 		}
-	case Maximized:
+	case mado.Maximized:
 		switch prev.Mode {
-		case Fullscreen:
-		case Minimized:
+		case mado.Fullscreen:
+		case mado.Minimized:
 			C.unhideWindow(window)
 			fallthrough
 		default:
-			w.config.Mode = Maximized
+			w.config.Mode = mado.Maximized
 			w.setTitle(prev, cnf)
 			if C.isWindowZoomed(window) == 0 {
 				C.zoomWindow(window)
 			}
 		}
-	case Windowed:
+	case mado.Windowed:
 		switch prev.Mode {
-		case Fullscreen:
+		case mado.Fullscreen:
 			C.toggleFullScreen(window)
-		case Minimized:
+		case mado.Minimized:
 			C.unhideWindow(window)
-		case Maximized:
+		case mado.Maximized:
 			if C.isWindowZoomed(window) != 0 {
 				C.zoomWindow(window)
 			}
 		}
-		w.config.Mode = Windowed
+		w.config.Mode = mado.Windowed
 		w.setTitle(prev, cnf)
 		if prev.Size != cnf.Size {
 			w.config.Size = cnf.Size
@@ -420,10 +423,10 @@ func (w *window) Configure(options []Option) {
 		C.setWindowStandardButtonHidden(window, C.NSWindowMiniaturizeButton, barTrans)
 		C.setWindowStandardButtonHidden(window, C.NSWindowZoomButton, barTrans)
 	}
-	w.w.Event(ConfigEvent{Config: w.config})
+	w.w.Event(mado.ConfigEvent{Config: w.config})
 }
 
-func (w *window) setTitle(prev, cnf Config) {
+func (w *window) setTitle(prev, cnf mado.Config) {
 	if prev.Title != cnf.Title {
 		w.config.Title = cnf.Title
 		title := stringToNSString(cnf.Title)
@@ -456,7 +459,7 @@ func (w *window) SetCursor(cursor pointer.Cursor) {
 	w.cursor = windowSetCursor(w.cursor, cursor)
 }
 
-func (w *window) EditorStateChanged(old, new editorState) {
+func (w *window) EditorStateChanged(old, new mado.EditorState) {
 	if old.Selection.Range != new.Selection.Range || old.Snippet != new.Snippet {
 		C.discardMarkedText(w.view)
 		w.w.SetComposingRegion(key.Range{Start: -1, End: -1})
@@ -550,7 +553,7 @@ func gio_onMouse(view, evt C.CFTypeRef, cdir C.int, cbtn C.NSInteger, x, y, dx, 
 		typ = pointer.Press
 		w.pointerBtns |= btn
 		act, ok := w.w.ActionAt(pos)
-		if ok && w.config.Mode != Fullscreen {
+		if ok && w.config.Mode != mado.Fullscreen {
 			switch act {
 			case system.ActionMove:
 				C.performWindowDragWithEvent(C.windowForView(w.view), evt)
@@ -604,7 +607,7 @@ func gio_onChangeScreen(view C.CFTypeRef, did uint64) {
 func gio_hasMarkedText(view C.CFTypeRef) C.int {
 	w := mustView(view)
 	state := w.w.EditorState()
-	if state.compose.Start != -1 {
+	if state.Compose.Start != -1 {
 		return 1
 	}
 	return 0
@@ -614,7 +617,7 @@ func gio_hasMarkedText(view C.CFTypeRef) C.int {
 func gio_markedRange(view C.CFTypeRef) C.NSRange {
 	w := mustView(view)
 	state := w.w.EditorState()
-	rng := state.compose
+	rng := state.Compose
 	start, end := rng.Start, rng.End
 	if start == -1 {
 		return C.NSMakeRange(C.NSNotFound, 0)
@@ -653,7 +656,7 @@ func gio_setMarkedText(view, cstr C.CFTypeRef, selRange C.NSRange, replaceRange 
 	w := mustView(view)
 	str := nsstringToString(cstr)
 	state := w.w.EditorState()
-	rng := state.compose
+	rng := state.Compose
 	if rng.Start == -1 {
 		rng = state.Selection.Range
 	}
@@ -713,7 +716,7 @@ func gio_substringForProposedRange(view C.CFTypeRef, crng C.NSRange, actual C.NS
 func gio_insertText(view, cstr C.CFTypeRef, crng C.NSRange) {
 	w := mustView(view)
 	state := w.w.EditorState()
-	rng := state.compose
+	rng := state.Compose
 	if rng.Start == -1 {
 		rng = state.Selection.Range
 	}
@@ -776,20 +779,18 @@ func (w *window) draw() {
 	}
 	if sz != w.config.Size {
 		w.config.Size = sz
-		w.w.Event(ConfigEvent{Config: w.config})
+		w.w.Event(mado.ConfigEvent{Config: w.config})
 	}
 	if sz.X == 0 || sz.Y == 0 {
 		return
 	}
 	cfg := configFor(w.scale)
 	w.setStage(StageRunning)
-	w.w.Event(frameEvent{
-		FrameEvent: FrameEvent{
-			Now:    time.Now(),
-			Size:   w.config.Size,
-			Metric: cfg,
-		},
-		Sync: true,
+	w.w.Event(mado.FrameEvent{
+		Now:    time.Now(),
+		Size:   w.config.Size,
+		Metric: cfg,
+		Sync:   true,
 	})
 }
 
@@ -827,15 +828,15 @@ func gio_onShow(view C.CFTypeRef) {
 //export gio_onFullscreen
 func gio_onFullscreen(view C.CFTypeRef) {
 	w := mustView(view)
-	w.config.Mode = Fullscreen
-	w.w.Event(ConfigEvent{Config: w.config})
+	w.config.Mode = mado.Fullscreen
+	w.w.Event(mado.ConfigEvent{Config: w.config})
 }
 
 //export gio_onWindowed
 func gio_onWindowed(view C.CFTypeRef) {
 	w := mustView(view)
-	w.config.Mode = Windowed
-	w.w.Event(ConfigEvent{Config: w.config})
+	w.config.Mode = mado.Windowed
+	w.w.Event(mado.ConfigEvent{Config: w.config})
 }
 
 //export gio_onAppHide
@@ -857,7 +858,7 @@ func gio_onFinishLaunching() {
 	close(launched)
 }
 
-func newWindow(win *callbacks, options []Option) error {
+func NewWindow(win mado.Callbacks, options []mado.Option) error {
 	<-launched
 	errch := make(chan error)
 	runOnMain(func() {
@@ -1004,4 +1005,5 @@ func convertMods(mods C.NSUInteger) key.Modifiers {
 	return kmods
 }
 
-func (_ ViewEvent) ImplementsEvent() {}
+func (_ ViewEvent) ImplementsEvent()     {}
+func (_ ViewEvent) ImplementsViewEvent() {}

@@ -136,6 +136,7 @@ import (
 	"unicode/utf16"
 	"unsafe"
 
+	"github.com/kanryu/mado"
 	"github.com/kanryu/mado/internal/f32color"
 
 	"github.com/kanryu/mado/f32"
@@ -1292,7 +1293,7 @@ func findClass(env *C.JNIEnv, name string) C.jclass {
 func osMain() {
 }
 
-func newWindow(window *callbacks, options []Option) error {
+func NewWindow(window *callbacks, options []Option) error {
 	mainWindow.in <- windowAndConfig{window, options}
 	return <-mainWindow.errs
 }
@@ -1369,7 +1370,7 @@ func (w *window) SetCursor(cursor pointer.Cursor) {
 
 func (w *window) Wakeup() {
 	runOnMain(func(env *C.JNIEnv) {
-		w.callbacks.Event(wakeupEvent{})
+		w.callbacks.Event(mado.WakeupEvent{})
 	})
 }
 

@@ -8,6 +8,7 @@ package app
 import (
 	"errors"
 
+	"github.com/kanryu/mado"
 	"github.com/kanryu/mado/gpu"
 )
 
@@ -168,6 +169,6 @@ func (c *mtlContext) Refresh() error {
 	return nil
 }
 
-func (w *window) NewContext() (context, error) {
+func (w *window) NewContext() (mado.Context, error) {
 	return newMtlContext(w)
 }

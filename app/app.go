@@ -7,12 +7,10 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
-	"time"
 
-	"github.com/kanryu/mado/io/input"
+	"github.com/kanryu/mado"
 	"github.com/kanryu/mado/layout"
 	"github.com/kanryu/mado/op"
-	"github.com/kanryu/mado/unit"
 )
 
 // extraArgs contains extra arguments to append to
@@ -37,32 +35,32 @@ var extraArgs string
 // is not supported. The default value of ID is filepath.Base(os.Args[0]).
 var ID = ""
 
-// A FrameEvent requests a new frame in the form of a list of
-// operations that describes the window content.
-type FrameEvent struct {
-	// Now is the current animation. Use Now instead of time.Now to
-	// synchronize animation and to avoid the time.Now call overhead.
-	Now time.Time
-	// Metric converts device independent dp and sp to device pixels.
-	Metric unit.Metric
-	// Size is the dimensions of the window.
-	Size image.Point
-	// Insets represent the space occupied by system decorations and controls.
-	Insets Insets
-	// Frame completes the FrameEvent by drawing the graphical operations
-	// from ops into the window.
-	Frame func(frame *op.Ops)
-	// Source is the interface between the window and widgets.
-	Source input.Source
-}
+// // A FrameEvent requests a new frame in the form of a list of
+// // operations that describes the window content.
+// type FrameEvent struct {
+// 	// Now is the current animation. Use Now instead of time.Now to
+// 	// synchronize animation and to avoid the time.Now call overhead.
+// 	Now time.Time
+// 	// Metric converts device independent dp and sp to device pixels.
+// 	Metric unit.Metric
+// 	// Size is the dimensions of the window.
+// 	Size image.Point
+// 	// Insets represent the space occupied by system decorations and controls.
+// 	Insets Insets
+// 	// Frame completes the FrameEvent by drawing the graphical operations
+// 	// from ops into the window.
+// 	Frame func(frame *op.Ops)
+// 	// Source is the interface between the window and widgets.
+// 	Source input.Source
+// }
 
-// Insets is the space taken up by
-// system decoration such as translucent
-// system bars and software keyboards.
-type Insets struct {
-	// Values are in pixels.
-	Top, Bottom, Left, Right unit.Dp
-}
+// // Insets is the space taken up by
+// // system decoration such as translucent
+// // system bars and software keyboards.
+// type Insets struct {
+// 	// Values are in pixels.
+// 	Top, Bottom, Left, Right unit.Dp
+// }
 
 // NewContext is shorthand for
 //
@@ -75,12 +73,12 @@ type Insets struct {
 //	}
 //
 // NewContext calls ops.Reset and adjusts ops for e.Insets.
-func NewContext(ops *op.Ops, e FrameEvent) layout.Context {
+func NewContext(ops *op.Ops, e mado.FrameEvent) layout.Context {
 	ops.Reset()
 
 	size := e.Size
 
-	if e.Insets != (Insets{}) {
+	if e.Insets != (mado.Insets{}) {
 		left := e.Metric.Dp(e.Insets.Left)
 		top := e.Metric.Dp(e.Insets.Top)
 		op.Offset(image.Point{
@@ -125,7 +123,7 @@ func Main() {
 	osMain()
 }
 
-func (FrameEvent) ImplementsEvent() {}
+//func (FrameEvent) ImplementsEvent() {}
 
 func init() {
 	if extraArgs != "" {

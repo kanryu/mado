@@ -9,6 +9,7 @@ import (
 	"testing"
 	"unicode/utf8"
 
+	"github.com/kanryu/mado"
 	"github.com/kanryu/mado/font"
 	"github.com/kanryu/mado/font/gofont"
 	"github.com/kanryu/mado/io/input"
@@ -39,7 +40,7 @@ func FuzzIME(f *testing.F) {
 		e.Layout(gtx, cache, font.Font{}, unit.Sp(10), op.CallOp{}, op.CallOp{})
 		r.Frame(gtx.Ops)
 
-		var state editorState
+		var state mado.EditorState
 		const (
 			cmdReplace = iota
 			cmdSelect
@@ -138,7 +139,7 @@ func FuzzIME(f *testing.F) {
 }
 
 func TestEditorIndices(t *testing.T) {
-	var s editorState
+	var s mado.EditorState
 	const str = "Hello, 😀"
 	s.Snippet = key.Snippet{
 		Text: str,
