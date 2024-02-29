@@ -168,3 +168,9 @@ type Window interface {
 	EffectiveConfig() Config
 	Perform(actions system.Action)
 }
+
+func DecoHeightOpt(h unit.Dp) Option {
+	return func(m unit.Metric, c *Config) {
+		c.DecoHeight = h
+	}
+}

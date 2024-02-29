@@ -31,7 +31,7 @@ func (c *callbacks) SetDriver(d mado.Driver) {
 	if d != nil {
 		wakeup = d.Wakeup
 	}
-	c.w.wakeupFuncs <- wakeup
+	c.w.WakeupFuncs <- wakeup
 }
 
 func (c *callbacks) Event(e event.Event) bool {
@@ -52,29 +52,29 @@ func (c *callbacks) Event(e event.Event) bool {
 	}
 	c.busy = false
 	select {
-	case <-c.w.destroy:
+	case <-c.w.Destroy:
 		return handled
 	default:
 	}
 	c.w.UpdateState(c.d)
 	if _, ok := e.(mado.WakeupEvent); ok {
 		select {
-		case opts := <-c.w.options:
-			cnf := mado.Config{Decorated: c.w.decorations.enabled}
+		case opts := <-c.w.Options:
+			cnf := mado.Config{Decorated: c.w.Decorations.Enabled}
 			for _, opt := range opts {
-				opt(c.w.metric, &cnf)
+				opt(c.w.Metric, &cnf)
 			}
-			c.w.decorations.enabled = cnf.Decorated
-			decoHeight := c.w.decorations.height
-			if !c.w.decorations.enabled {
+			c.w.Decorations.Enabled = cnf.Decorated
+			decoHeight := c.w.Decorations.Height
+			if !c.w.Decorations.Enabled {
 				decoHeight = 0
 			}
-			opts = append(opts, decoHeightOpt(decoHeight))
+			opts = append(opts, mado.DecoHeightOpt(decoHeight))
 			c.d.Configure(opts)
 		default:
 		}
 		select {
-		case acts := <-c.w.actions:
+		case acts := <-c.w.Actions:
 			c.d.Perform(acts)
 		default:
 		}
@@ -85,39 +85,39 @@ func (c *callbacks) Event(e event.Event) bool {
 // SemanticRoot returns the ID of the semantic root.
 func (c *callbacks) SemanticRoot() input.SemanticID {
 	c.w.UpdateSemantics()
-	return c.w.semantic.root
+	return c.w.Semantic.Root
 }
 
 // LookupSemantic looks up a semantic node from an ID. The zero ID denotes the root.
 func (c *callbacks) LookupSemantic(semID input.SemanticID) (input.SemanticNode, bool) {
 	c.w.UpdateSemantics()
-	n, found := c.w.semantic.ids[semID]
+	n, found := c.w.Semantic.Ids[semID]
 	return n, found
 }
 
 func (c *callbacks) AppendSemanticDiffs(diffs []input.SemanticID) []input.SemanticID {
 	c.w.UpdateSemantics()
-	if tree := c.w.semantic.prevTree; len(tree) > 0 {
-		c.w.CollectSemanticDiffs(&diffs, c.w.semantic.prevTree[0])
+	if tree := c.w.Semantic.PrevTree; len(tree) > 0 {
+		c.w.CollectSemanticDiffs(&diffs, c.w.Semantic.PrevTree[0])
 	}
 	return diffs
 }
 
 func (c *callbacks) SemanticAt(pos f32.Point) (input.SemanticID, bool) {
 	c.w.UpdateSemantics()
-	return c.w.queue.SemanticAt(pos)
+	return c.w.Queue.SemanticAt(pos)
 }
 
 func (c *callbacks) EditorState() mado.EditorState {
-	return c.w.imeState
+	return c.w.ImeState
 }
 
 func (c *callbacks) SetComposingRegion(r key.Range) {
-	c.w.imeState.Compose = r
+	c.w.ImeState.Compose = r
 }
 
 func (c *callbacks) EditorInsert(text string) {
-	sel := c.w.imeState.Selection.Range
+	sel := c.w.ImeState.Selection.Range
 	c.EditorReplace(sel, text)
 	start := sel.Start
 	if sel.End < start {
@@ -129,13 +129,13 @@ func (c *callbacks) EditorInsert(text string) {
 }
 
 func (c *callbacks) EditorReplace(r key.Range, text string) {
-	c.w.imeState.Replace(r, text)
+	c.w.ImeState.Replace(r, text)
 	c.Event(key.EditEvent{Range: r, Text: text})
-	c.Event(key.SnippetEvent(c.w.imeState.Snippet.Range))
+	c.Event(key.SnippetEvent(c.w.ImeState.Snippet.Range))
 }
 
 func (c *callbacks) SetEditorSelection(r key.Range) {
-	c.w.imeState.Selection.Range = r
+	c.w.ImeState.Selection.Range = r
 	c.Event(key.SelectionEvent(r))
 }
 
@@ -148,11 +148,11 @@ func (c *callbacks) SetEditorSnippet(r key.Range) {
 }
 
 func (c *callbacks) ClickFocus() {
-	c.w.queue.ClickFocus()
+	c.w.Queue.ClickFocus()
 	c.w.SetNextFrame(time.Time{})
 	c.w.UpdateAnimation(c.d)
 }
 
 func (c *callbacks) ActionAt(p f32.Point) (system.Action, bool) {
-	return c.w.queue.ActionAt(p)
+	return c.w.Queue.ActionAt(p)
 }

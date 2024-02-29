@@ -47,7 +47,7 @@ type Window struct {
 	// WakeupEvent that flushes driverFuncs.
 	wakeups chan struct{}
 	// wakeupFuncs is sent wakeup functions when the driver changes.
-	wakeupFuncs chan func()
+	WakeupFuncs chan func()
 	// redraws is notified when a redraw is requested by the client.
 	redraws chan struct{}
 	// immediateRedraws is like redraw but doesn't need a wakeup.
@@ -55,16 +55,16 @@ type Window struct {
 	// scheduledRedraws is sent the most recent delayed redraw time.
 	scheduledRedraws chan time.Time
 	// options are the options waiting to be applied.
-	options chan []mado.Option
+	Options chan []mado.Option
 	// actions are the actions waiting to be performed.
-	actions chan system.Action
+	Actions chan system.Action
 
 	// out is where the platform backend delivers events bound for the
 	// user program.
 	out      chan event.Event
 	frames   chan *op.Ops
 	frameAck chan struct{}
-	destroy  chan struct{}
+	Destroy  chan struct{}
 
 	stage        Stage
 	animating    bool
@@ -73,20 +73,20 @@ type Window struct {
 	// viewport is the latest frame size with insets applied.
 	viewport image.Rectangle
 	// metric is the metric from the most recent frame.
-	metric unit.Metric
+	Metric unit.Metric
 
-	queue       input.Router
+	Queue       input.Router
 	cursor      pointer.Cursor
-	decorations struct {
+	Decorations struct {
 		op.Ops
 		// enabled tracks the Decorated option as
 		// given to the Option method. It may differ
 		// from Config.Decorated depending on platform
 		// capability.
-		enabled bool
+		Enabled bool
 		mado.Config
-		height        unit.Dp
-		currentHeight int
+		Height        unit.Dp
+		CurrentHeight int
 		*material.Theme
 		*widget.Decorations
 	}
@@ -97,16 +97,16 @@ type Window struct {
 
 	// semantic data, lazily evaluated if requested by a backend to speed up
 	// the cases where semantic data is not needed.
-	semantic struct {
+	Semantic struct {
 		// uptodate tracks whether the fields below are up to date.
-		uptodate bool
-		root     input.SemanticID
-		prevTree []input.SemanticNode
-		tree     []input.SemanticNode
-		ids      map[input.SemanticID]input.SemanticNode
+		Uptodate bool
+		Root     input.SemanticID
+		PrevTree []input.SemanticNode
+		Tree     []input.SemanticNode
+		Ids      map[input.SemanticID]input.SemanticNode
 	}
 
-	imeState mado.EditorState
+	ImeState mado.EditorState
 
 	// event stores the state required for processing and delivering events
 	// from NextEvent. If we had support for range over func, this would
@@ -163,7 +163,7 @@ func NewWindow(options ...mado.Option) *Window {
 		Size(800, 600),
 		Title("Gio"),
 		Decorated(true),
-		decoHeightOpt(decoHeight),
+		mado.DecoHeightOpt(decoHeight),
 	}
 	options = append(defaultOptions, options...)
 	var cnf mado.Config
@@ -178,28 +178,28 @@ func NewWindow(options ...mado.Option) *Window {
 		frameAck:         make(chan struct{}),
 		driverFuncs:      make(chan func(d mado.Driver), 1),
 		wakeups:          make(chan struct{}, 1),
-		wakeupFuncs:      make(chan func()),
-		destroy:          make(chan struct{}),
-		options:          make(chan []mado.Option, 1),
-		actions:          make(chan system.Action, 1),
+		WakeupFuncs:      make(chan func()),
+		Destroy:          make(chan struct{}),
+		Options:          make(chan []mado.Option, 1),
+		Actions:          make(chan system.Action, 1),
 		nocontext:        cnf.CustomRenderer,
 	}
-	w.decorations.Theme = theme
-	w.decorations.Decorations = deco
-	w.decorations.enabled = cnf.Decorated
-	w.decorations.height = decoHeight
-	w.imeState.Compose = key.Range{Start: -1, End: -1}
-	w.semantic.ids = make(map[input.SemanticID]input.SemanticNode)
+	w.Decorations.Theme = theme
+	w.Decorations.Decorations = deco
+	w.Decorations.Enabled = cnf.Decorated
+	w.Decorations.Height = decoHeight
+	w.ImeState.Compose = key.Range{Start: -1, End: -1}
+	w.Semantic.Ids = make(map[input.SemanticID]input.SemanticNode)
 	w.callbacks.w = w
 	w.eventState.initialOpts = options
 	return w
 }
 
-func decoHeightOpt(h unit.Dp) mado.Option {
-	return func(m unit.Metric, c *mado.Config) {
-		c.DecoHeight = h
-	}
-}
+// func decoHeightOpt(h unit.Dp) mado.Option {
+// 	return func(m unit.Metric, c *mado.Config) {
+// 		c.DecoHeight = h
+// 	}
+// }
 
 // update the window contents, input operations declare input handlers,
 // and so on. The supplied operations list completely replaces the window state
@@ -274,7 +274,7 @@ func (w *Window) ValidateAndProcess(d mado.Driver, size image.Point, sync bool, 
 				return err
 			}
 		}
-		w.queue.Frame(frame)
+		w.Queue.Frame(frame)
 		// Let the client continue as soon as possible, in particular before
 		// a potentially blocking Present.
 		signal()
@@ -303,11 +303,11 @@ func (w *Window) Frame(frame *op.Ops, viewport image.Point) error {
 }
 
 func (w *Window) ProcessFrame(d mado.Driver) {
-	for k := range w.semantic.ids {
-		delete(w.semantic.ids, k)
+	for k := range w.Semantic.Ids {
+		delete(w.Semantic.Ids, k)
 	}
-	w.semantic.uptodate = false
-	q := &w.queue
+	w.Semantic.Uptodate = false
+	q := &w.Queue
 	switch q.TextInputState() {
 	case input.TextInputOpen:
 		d.ShowTextInput(true)
@@ -323,11 +323,11 @@ func (w *Window) ProcessFrame(d mado.Driver) {
 	if q.ClipboardRequested() {
 		d.ReadClipboard()
 	}
-	oldState := w.imeState
+	oldState := w.ImeState
 	newState := oldState
 	newState.EditorState = q.EditorState()
 	if newState != oldState {
-		w.imeState = newState
+		w.ImeState = newState
 		d.EditorStateChanged(oldState, newState)
 	}
 	if t, ok := q.WakeupTime(); ok {
@@ -364,9 +364,9 @@ func (w *Window) Option(opts ...mado.Option) {
 	}
 	for {
 		select {
-		case old := <-w.options:
+		case old := <-w.Options:
 			opts = append(old, opts...)
-		case w.options <- opts:
+		case w.Options <- opts:
 			w.Wakeup()
 			return
 		}
@@ -389,7 +389,7 @@ func (w *Window) Run(f func()) {
 	})
 	select {
 	case <-done:
-	case <-w.destroy:
+	case <-w.Destroy:
 	}
 }
 
@@ -399,7 +399,7 @@ func (w *Window) DriverDefer(f func(d mado.Driver)) {
 	select {
 	case w.driverFuncs <- f:
 		w.Wakeup()
-	case <-w.destroy:
+	case <-w.Destroy:
 	}
 }
 
@@ -564,9 +564,9 @@ func (w *Window) SetNextFrame(at time.Time) {
 // }
 
 func (w *Window) moveFocus(dir key.FocusDirection) {
-	w.queue.MoveFocus(dir)
-	if _, handled := w.queue.WakeupTime(); handled {
-		w.queue.RevealFocus(w.viewport)
+	w.Queue.MoveFocus(dir)
+	if _, handled := w.Queue.WakeupTime(); handled {
+		w.Queue.RevealFocus(w.viewport)
 	} else {
 		var v image.Point
 		switch dir {
@@ -582,8 +582,8 @@ func (w *Window) moveFocus(dir key.FocusDirection) {
 			return
 		}
 		const scrollABit = unit.Dp(50)
-		dist := v.Mul(int(w.metric.Dp(scrollABit)))
-		w.queue.ScrollFocus(dist)
+		dist := v.Mul(int(w.Metric.Dp(scrollABit)))
+		w.Queue.ScrollFocus(dist)
 	}
 }
 
@@ -753,21 +753,21 @@ func (w *Window) waitFrame(d mado.Driver) *op.Ops {
 // updateSemantics refreshes the semantics tree, the id to node map and the ids of
 // updated nodes.
 func (w *Window) UpdateSemantics() {
-	if w.semantic.uptodate {
+	if w.Semantic.Uptodate {
 		return
 	}
-	w.semantic.uptodate = true
-	w.semantic.prevTree, w.semantic.tree = w.semantic.tree, w.semantic.prevTree
-	w.semantic.tree = w.queue.AppendSemantics(w.semantic.tree[:0])
-	w.semantic.root = w.semantic.tree[0].ID
-	for _, n := range w.semantic.tree {
-		w.semantic.ids[n.ID] = n
+	w.Semantic.Uptodate = true
+	w.Semantic.PrevTree, w.Semantic.Tree = w.Semantic.Tree, w.Semantic.PrevTree
+	w.Semantic.Tree = w.Queue.AppendSemantics(w.Semantic.Tree[:0])
+	w.Semantic.Root = w.Semantic.Tree[0].ID
+	for _, n := range w.Semantic.Tree {
+		w.Semantic.Ids[n.ID] = n
 	}
 }
 
 // CollectSemanticDiffs traverses the previous semantic tree, noting changed nodes.
 func (w *Window) CollectSemanticDiffs(diffs *[]input.SemanticID, n input.SemanticNode) {
-	newNode, exists := w.semantic.ids[n.ID]
+	newNode, exists := w.Semantic.Ids[n.ID]
 	// Ignore deleted nodes, as their disappearance will be reported through an
 	// ancestor node.
 	if !exists {
@@ -802,7 +802,7 @@ func (w *Window) UpdateState(d mado.Driver) {
 
 func (w *Window) ProcessEvent(d mado.Driver, e event.Event) bool {
 	select {
-	case <-w.destroy:
+	case <-w.Destroy:
 		return false
 	default:
 	}
@@ -828,13 +828,13 @@ func (w *Window) ProcessEvent(d mado.Driver, e event.Event) bool {
 			// No drawing if not visible.
 			break
 		}
-		w.metric = e2.Metric
+		w.Metric = e2.Metric
 		w.hasNextFrame = false
 		e2.Frame = w.Update
-		e2.Source = w.queue.Source()
+		e2.Source = w.Queue.Source()
 
 		// Prepare the decorations and update the frame insets.
-		wrapper := &w.decorations.Ops
+		wrapper := &w.Decorations.Ops
 		wrapper.Reset()
 		viewport := image.Rectangle{
 			Min: image.Point{
@@ -848,7 +848,7 @@ func (w *Window) ProcessEvent(d mado.Driver, e event.Event) bool {
 		}
 		// Scroll to focus if viewport is shrinking in any dimension.
 		if old, new := w.viewport.Size(), viewport.Size(); new.X < old.X || new.Y < old.Y {
-			w.queue.RevealFocus(viewport)
+			w.Queue.RevealFocus(viewport)
 		}
 		w.viewport = viewport
 		viewSize := e2.Size
@@ -869,7 +869,7 @@ func (w *Window) ProcessEvent(d mado.Driver, e event.Event) bool {
 		if err := w.ValidateAndProcess(d, viewSize, e2.Sync, wrapper, signal); err != nil {
 			w.DestroyGPU()
 			w.out <- mado.DestroyEvent{Err: err}
-			close(w.destroy)
+			close(w.Destroy)
 			break
 		}
 		w.ProcessFrame(d)
@@ -877,12 +877,12 @@ func (w *Window) ProcessEvent(d mado.Driver, e event.Event) bool {
 	case mado.DestroyEvent:
 		w.DestroyGPU()
 		w.out <- e2
-		close(w.destroy)
+		close(w.Destroy)
 	case ViewEvent:
 		w.out <- e2
 		w.WaitAck(d)
 	case mado.ConfigEvent:
-		w.decorations.Config = e2.Config
+		w.Decorations.Config = e2.Config
 		e2.Config = w.EffectiveConfig()
 		w.out <- e2
 	case mado.WakeupEvent:
@@ -909,11 +909,11 @@ func (w *Window) ProcessEvent(d mado.Driver, e event.Event) bool {
 		if focusDir != -1 {
 			e = input.SystemEvent{Event: e}
 		}
-		w.queue.Queue(e)
-		t, handled := w.queue.WakeupTime()
+		w.Queue.Queue(e)
+		t, handled := w.Queue.WakeupTime()
 		if focusDir != -1 && !handled {
 			w.moveFocus(focusDir)
-			t, handled = w.queue.WakeupTime()
+			t, handled = w.Queue.WakeupTime()
 		}
 		w.UpdateCursor(d)
 		if handled {
@@ -933,7 +933,7 @@ func (w *Window) NextEvent() event.Event {
 	if !state.created {
 		state.created = true
 		if err := newWindow(&w.callbacks, state.initialOpts); err != nil {
-			close(w.destroy)
+			close(w.Destroy)
 			return mado.DestroyEvent{Err: err}
 		}
 	}
@@ -969,21 +969,21 @@ func (w *Window) NextEvent() event.Event {
 			}
 		case <-wakeups:
 			state.wakeup()
-		case state.wakeup = <-w.wakeupFuncs:
+		case state.wakeup = <-w.WakeupFuncs:
 		}
 	}
 }
 
 func (w *Window) UpdateCursor(d mado.Driver) {
-	if c := w.queue.Cursor(); c != w.cursor {
+	if c := w.Queue.Cursor(); c != w.cursor {
 		w.cursor = c
 		d.SetCursor(c)
 	}
 }
 
 func (w *Window) FallbackDecorate() bool {
-	cnf := w.decorations.Config
-	return w.decorations.enabled && !cnf.Decorated && cnf.Mode != mado.Fullscreen && !w.nocontext
+	cnf := w.Decorations.Config
+	return w.Decorations.Enabled && !cnf.Decorated && cnf.Mode != mado.Fullscreen && !w.nocontext
 }
 
 // decorate the window if enabled and returns the corresponding Insets.
@@ -991,13 +991,13 @@ func (w *Window) Decorate(d mado.Driver, e mado.FrameEvent, o *op.Ops) (size, of
 	if !w.FallbackDecorate() {
 		return e.Size, image.Pt(0, 0)
 	}
-	deco := w.decorations.Decorations
+	deco := w.Decorations.Decorations
 	allActions := system.ActionMinimize | system.ActionMaximize | system.ActionUnmaximize |
 		system.ActionClose | system.ActionMove
-	style := material.Decorations(w.decorations.Theme, deco, allActions, w.decorations.Config.Title)
+	style := material.Decorations(w.Decorations.Theme, deco, allActions, w.Decorations.Config.Title)
 	// Update the decorations based on the current window mode.
 	var actions system.Action
-	switch m := w.decorations.Config.Mode; m {
+	switch m := w.Decorations.Config.Mode; m {
 	case mado.Windowed:
 		actions |= system.ActionUnmaximize
 	case mado.Minimized:
@@ -1021,19 +1021,19 @@ func (w *Window) Decorate(d mado.Driver, e mado.FrameEvent, o *op.Ops) (size, of
 	w.Perform(deco.Update(gtx))
 	style.Layout(gtx)
 	// Offset to place the frame content below the decorations.
-	decoHeight := gtx.Dp(w.decorations.Config.DecoHeight)
-	if w.decorations.currentHeight != decoHeight {
-		w.decorations.currentHeight = decoHeight
+	decoHeight := gtx.Dp(w.Decorations.Config.DecoHeight)
+	if w.Decorations.CurrentHeight != decoHeight {
+		w.Decorations.CurrentHeight = decoHeight
 		w.out <- mado.ConfigEvent{Config: w.EffectiveConfig()}
 	}
-	e.Size.Y -= w.decorations.currentHeight
+	e.Size.Y -= w.Decorations.CurrentHeight
 	return e.Size, image.Pt(0, decoHeight)
 }
 
 func (w *Window) EffectiveConfig() mado.Config {
-	cnf := w.decorations.Config
-	cnf.Size.Y -= w.decorations.currentHeight
-	cnf.Decorated = w.decorations.enabled || cnf.Decorated
+	cnf := w.Decorations.Config
+	cnf.Size.Y -= w.Decorations.CurrentHeight
+	cnf.Decorated = w.Decorations.Enabled || cnf.Decorated
 	return cnf
 }
 
@@ -1057,9 +1057,9 @@ func (w *Window) Perform(actions system.Action) {
 	}
 	for {
 		select {
-		case old := <-w.actions:
+		case old := <-w.Actions:
 			actions |= old
-		case w.actions <- actions:
+		case w.Actions <- actions:
 			w.Wakeup()
 			return
 		}

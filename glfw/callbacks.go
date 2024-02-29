@@ -5,6 +5,7 @@ import (
 	"unicode/utf8"
 
 	"github.com/kanryu/mado"
+	"github.com/kanryu/mado/app"
 	"github.com/kanryu/mado/f32"
 	"github.com/kanryu/mado/io/event"
 	"github.com/kanryu/mado/io/input"
@@ -15,13 +16,13 @@ import (
 var _ mado.Callbacks = (*Callbacks)(nil)
 
 type Callbacks struct {
-	W          *mado.Window
+	W          *app.Window
 	D          mado.Driver
 	Busy       bool
 	WaitEvents []event.Event
 }
 
-func (c *Callbacks) SetWindow(w *mado.Window) {
+func (c *Callbacks) SetWindow(w *app.Window) {
 	c.W = w
 }
 
