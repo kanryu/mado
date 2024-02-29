@@ -12,20 +12,20 @@ import (
 	"github.com/kanryu/mado/io/system"
 )
 
-var _ mado.Callbacks = (*callbacks)(nil)
+var _ mado.Callbacks = (*Callbacks)(nil)
 
-type callbacks struct {
+type Callbacks struct {
 	w          *Window
 	d          mado.Driver
 	busy       bool
 	waitEvents []event.Event
 }
 
-func (c *callbacks) SetWindow(w *Window) {
-	c.w = w
+func (c *Callbacks) SetWindow(w mado.Window) {
+	c.w = w.(*Window)
 }
 
-func (c *callbacks) SetDriver(d mado.Driver) {
+func (c *Callbacks) SetDriver(d mado.Driver) {
 	c.d = d
 	var wakeup func()
 	if d != nil {
@@ -34,7 +34,7 @@ func (c *callbacks) SetDriver(d mado.Driver) {
 	c.w.WakeupFuncs <- wakeup
 }
 
-func (c *callbacks) Event(e event.Event) bool {
+func (c *Callbacks) Event(e event.Event) bool {
 	if c.d == nil {
 		panic("event while no driver active")
 	}
@@ -83,19 +83,19 @@ func (c *callbacks) Event(e event.Event) bool {
 }
 
 // SemanticRoot returns the ID of the semantic root.
-func (c *callbacks) SemanticRoot() input.SemanticID {
+func (c *Callbacks) SemanticRoot() input.SemanticID {
 	c.w.UpdateSemantics()
 	return c.w.Semantic.Root
 }
 
 // LookupSemantic looks up a semantic node from an ID. The zero ID denotes the root.
-func (c *callbacks) LookupSemantic(semID input.SemanticID) (input.SemanticNode, bool) {
+func (c *Callbacks) LookupSemantic(semID input.SemanticID) (input.SemanticNode, bool) {
 	c.w.UpdateSemantics()
 	n, found := c.w.Semantic.Ids[semID]
 	return n, found
 }
 
-func (c *callbacks) AppendSemanticDiffs(diffs []input.SemanticID) []input.SemanticID {
+func (c *Callbacks) AppendSemanticDiffs(diffs []input.SemanticID) []input.SemanticID {
 	c.w.UpdateSemantics()
 	if tree := c.w.Semantic.PrevTree; len(tree) > 0 {
 		c.w.CollectSemanticDiffs(&diffs, c.w.Semantic.PrevTree[0])
@@ -103,20 +103,20 @@ func (c *callbacks) AppendSemanticDiffs(diffs []input.SemanticID) []input.Semant
 	return diffs
 }
 
-func (c *callbacks) SemanticAt(pos f32.Point) (input.SemanticID, bool) {
+func (c *Callbacks) SemanticAt(pos f32.Point) (input.SemanticID, bool) {
 	c.w.UpdateSemantics()
 	return c.w.Queue.SemanticAt(pos)
 }
 
-func (c *callbacks) EditorState() mado.EditorState {
+func (c *Callbacks) EditorState() mado.EditorState {
 	return c.w.ImeState
 }
 
-func (c *callbacks) SetComposingRegion(r key.Range) {
+func (c *Callbacks) SetComposingRegion(r key.Range) {
 	c.w.ImeState.Compose = r
 }
 
-func (c *callbacks) EditorInsert(text string) {
+func (c *Callbacks) EditorInsert(text string) {
 	sel := c.w.ImeState.Selection.Range
 	c.EditorReplace(sel, text)
 	start := sel.Start
@@ -128,18 +128,18 @@ func (c *callbacks) EditorInsert(text string) {
 	c.SetEditorSelection(sel)
 }
 
-func (c *callbacks) EditorReplace(r key.Range, text string) {
+func (c *Callbacks) EditorReplace(r key.Range, text string) {
 	c.w.ImeState.Replace(r, text)
 	c.Event(key.EditEvent{Range: r, Text: text})
 	c.Event(key.SnippetEvent(c.w.ImeState.Snippet.Range))
 }
 
-func (c *callbacks) SetEditorSelection(r key.Range) {
+func (c *Callbacks) SetEditorSelection(r key.Range) {
 	c.w.ImeState.Selection.Range = r
 	c.Event(key.SelectionEvent(r))
 }
 
-func (c *callbacks) SetEditorSnippet(r key.Range) {
+func (c *Callbacks) SetEditorSnippet(r key.Range) {
 	if sn := c.EditorState().Snippet.Range; sn == r {
 		// No need to expand.
 		return
@@ -147,12 +147,12 @@ func (c *callbacks) SetEditorSnippet(r key.Range) {
 	c.Event(key.SnippetEvent(r))
 }
 
-func (c *callbacks) ClickFocus() {
+func (c *Callbacks) ClickFocus() {
 	c.w.Queue.ClickFocus()
 	c.w.SetNextFrame(time.Time{})
 	c.w.UpdateAnimation(c.d)
 }
 
-func (c *callbacks) ActionAt(p f32.Point) (system.Action, bool) {
+func (c *Callbacks) ActionAt(p f32.Point) (system.Action, bool) {
 	return c.w.Queue.ActionAt(p)
 }

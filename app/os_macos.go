@@ -856,7 +856,7 @@ func gio_onFinishLaunching() {
 	close(launched)
 }
 
-func newWindow(win *callbacks, options []mado.Option) error {
+func newWindow(win mado.Callbacks, options []mado.Option) error {
 	<-launched
 	errch := make(chan error)
 	runOnMain(func() {

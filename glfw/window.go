@@ -18,10 +18,10 @@ import (
 // Internal window list stuff
 type windowList struct {
 	l sync.Mutex
-	m map[*mado.Window]*Window
+	m map[*app.Window]*Window
 }
 
-var windows = windowList{m: map[*mado.Window]*Window{}}
+var windows = windowList{m: map[*app.Window]*Window{}}
 
 func (w *windowList) put(wnd *Window) {
 	w.l.Lock()
@@ -29,13 +29,13 @@ func (w *windowList) put(wnd *Window) {
 	w.m[wnd.data] = wnd
 }
 
-func (w *windowList) remove(wnd *mado.Window) {
+func (w *windowList) remove(wnd *app.Window) {
 	w.l.Lock()
 	defer w.l.Unlock()
 	delete(w.m, wnd)
 }
 
-func (w *windowList) get(wnd *mado.Window) *Window {
+func (w *windowList) get(wnd *app.Window) *Window {
 	w.l.Lock()
 	defer w.l.Unlock()
 	return w.m[wnd]
@@ -160,8 +160,9 @@ const (
 
 // Window represents a window.
 type Window struct {
-	data    *mado.Window
-	pointer unsafe.Pointer
+	data      *app.Window
+	callbacks *Callbacks
+	pointer   unsafe.Pointer
 
 	shouldClose bool
 
@@ -236,16 +237,12 @@ type Window struct {
 //
 // This function may only be called from the main thread.
 func CreateWindow(width, height int, title string, monitor *Monitor, share *Window) (*Window, error) {
-	w := mado.NewWindow()
-	w.Callbacks = &Callbacks{W: w}
-	state := &w.EventState
-	if err := app.NewWindow(w.Callbacks, state.InitialOpts); err != nil {
-		close(w.Destroy)
-		return nil, err
-		//return mado.DestroyEvent{Err: err}
-	}
+	c := &Callbacks{}
+	w := app.NewWindow(c)
+	c.W = w
 	wnd := &Window{
-		data: w,
+		data:      w,
+		callbacks: c,
 	}
 	return wnd, nil
 }
@@ -256,7 +253,7 @@ func CreateWindow(width, height int, title string, monitor *Monitor, share *Wind
 // This function may only be called from the main thread.
 func (w *Window) Destroy() {
 	windows.remove(w.data)
-	w.data.Callbacks.Event(mado.DestroyEvent{Err: nil})
+	w.callbacks.Event(mado.DestroyEvent{Err: nil})
 	panicError()
 }
 
@@ -278,7 +275,7 @@ func (w *Window) SetShouldClose(value bool) {
 //
 // This function may only be called from the main thread.
 func (w *Window) SetTitle(title string) {
-	option := mado.Title(title)
+	option := app.Title(title)
 	w.data.Option(option)
 	panicError()
 }
@@ -457,7 +454,7 @@ func (w *Window) RequestAttention() {
 // Do not use this function to steal focus from other applications unless you are certain that
 // is what the user wants. Focus stealing can be extremely disruptive.
 func (w *Window) Focus() {
-	w.data.Callbacks.Event(key.FocusEvent{Focus: true})
+	w.callbacks.Event(key.FocusEvent{Focus: true})
 }
 
 // Iconify iconifies/minimizes the window, if it was previously restored. If it

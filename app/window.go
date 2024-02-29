@@ -91,7 +91,7 @@ type Window struct {
 		*widget.Decorations
 	}
 
-	callbacks callbacks
+	callbacks mado.Callbacks
 
 	nocontext bool
 
@@ -111,11 +111,11 @@ type Window struct {
 	// event stores the state required for processing and delivering events
 	// from NextEvent. If we had support for range over func, this would
 	// be the iterator state.
-	eventState struct {
-		created     bool
-		initialOpts []mado.Option
-		wakeup      func()
-		timer       *time.Timer
+	EventState struct {
+		Created     bool
+		InitialOpts []mado.Option
+		Wakeup      func()
+		Timer       *time.Timer
 	}
 }
 
@@ -143,7 +143,7 @@ type Window struct {
 //
 // Calling NewWindow more than once is not supported on
 // iOS, Android, WebAssembly.
-func NewWindow(options ...mado.Option) *Window {
+func NewWindow(callbacks mado.Callbacks, options ...mado.Option) *Window {
 	debug.Parse()
 	// Measure decoration height.
 	deco := new(widget.Decorations)
@@ -183,6 +183,7 @@ func NewWindow(options ...mado.Option) *Window {
 		Options:          make(chan []mado.Option, 1),
 		Actions:          make(chan system.Action, 1),
 		nocontext:        cnf.CustomRenderer,
+		callbacks:        callbacks,
 	}
 	w.Decorations.Theme = theme
 	w.Decorations.Decorations = deco
@@ -190,8 +191,8 @@ func NewWindow(options ...mado.Option) *Window {
 	w.Decorations.Height = decoHeight
 	w.ImeState.Compose = key.Range{Start: -1, End: -1}
 	w.Semantic.Ids = make(map[input.SemanticID]input.SemanticNode)
-	w.callbacks.w = w
-	w.eventState.initialOpts = options
+	w.callbacks.SetWindow(w)
+	w.EventState.InitialOpts = options
 	return w
 }
 
@@ -929,10 +930,10 @@ func (w *Window) ProcessEvent(d mado.Driver, e event.Event) bool {
 // [FrameEvent]. It blocks forever if called after [DestroyEvent]
 // has been returned.
 func (w *Window) NextEvent() event.Event {
-	state := &w.eventState
-	if !state.created {
-		state.created = true
-		if err := newWindow(&w.callbacks, state.initialOpts); err != nil {
+	state := &w.EventState
+	if !state.Created {
+		state.Created = true
+		if err := newWindow(w.callbacks, state.InitialOpts); err != nil {
 			close(w.Destroy)
 			return mado.DestroyEvent{Err: err}
 		}
@@ -942,18 +943,18 @@ func (w *Window) NextEvent() event.Event {
 			wakeups <-chan struct{}
 			timeC   <-chan time.Time
 		)
-		if state.wakeup != nil {
+		if state.Wakeup != nil {
 			wakeups = w.wakeups
-			if state.timer != nil {
-				timeC = state.timer.C
+			if state.Timer != nil {
+				timeC = state.Timer.C
 			}
 		}
 		select {
 		case t := <-w.scheduledRedraws:
-			if state.timer != nil {
-				state.timer.Stop()
+			if state.Timer != nil {
+				state.Timer.Stop()
 			}
-			state.timer = time.NewTimer(time.Until(t))
+			state.Timer = time.NewTimer(time.Until(t))
 		case e := <-w.out:
 			// Receiving a flushEvent indicates to the platform backend that
 			// all previous events have been processed by the user program.
@@ -964,12 +965,12 @@ func (w *Window) NextEvent() event.Event {
 		case <-timeC:
 			select {
 			case w.redraws <- struct{}{}:
-				state.wakeup()
+				state.Wakeup()
 			default:
 			}
 		case <-wakeups:
-			state.wakeup()
-		case state.wakeup = <-w.WakeupFuncs:
+			state.Wakeup()
+		case state.Wakeup = <-w.WakeupFuncs:
 		}
 	}
 }

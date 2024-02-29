@@ -22,8 +22,8 @@ type Callbacks struct {
 	WaitEvents []event.Event
 }
 
-func (c *Callbacks) SetWindow(w *app.Window) {
-	c.W = w
+func (c *Callbacks) SetWindow(w mado.Window) {
+	c.W = w.(*app.Window)
 }
 
 func (c *Callbacks) SetDriver(d mado.Driver) {

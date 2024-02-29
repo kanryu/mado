@@ -11,6 +11,7 @@ import (
 
 	"github.com/kanryu/mado"
 	"github.com/kanryu/mado/app"
+	"github.com/kanryu/mado/glfw"
 	"github.com/kanryu/mado/io/event"
 	"github.com/kanryu/mado/io/key"
 	"github.com/kanryu/mado/io/pointer"
@@ -19,7 +20,8 @@ import (
 
 func main() {
 	go func() {
-		w := app.NewWindow()
+		//w := app.NewWindow(&app.Callbacks{})
+		w := app.NewWindow(&glfw.Callbacks{})
 		if err := loop(w); err != nil {
 			log.Fatal(err)
 		}

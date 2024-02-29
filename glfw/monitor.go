@@ -36,25 +36,25 @@ type VidMode struct {
 var fMonitorHolder func(monitor *Monitor, event PeripheralEvent)
 
 //export goMonitorCB
-func goMonitorCB(monitor unsafe.Pointer, event C.int) {
-	fMonitorHolder(&Monitor{(*C.GLFWmonitor)(monitor)}, PeripheralEvent(event))
+func goMonitorCB(monitor unsafe.Pointer, event int) {
+	//fMonitorHolder(&Monitor{(*C.GLFWmonitor)(monitor)}, PeripheralEvent(event))
 }
 
 // GetMonitors returns a slice of handles for all currently connected monitors.
 func GetMonitors() []*Monitor {
 	var length int
 
-	mC := C.glfwGetMonitors((*C.int)(unsafe.Pointer(&length)))
-	panicError()
-	if mC == nil {
-		return nil
-	}
+	// mC := C.glfwGetMonitors((*C.int)(unsafe.Pointer(&length)))
+	// panicError()
+	// if mC == nil {
+	// 	return nil
+	// }
 
 	m := make([]*Monitor, length)
 
-	for i := 0; i < length; i++ {
-		m[i] = &Monitor{C.GetMonitorAtIndex(mC, C.int(i))}
-	}
+	// for i := 0; i < length; i++ {
+	// 	m[i] = &Monitor{C.GetMonitorAtIndex(mC, C.int(i))}
+	// }
 
 	return m
 }
@@ -62,19 +62,20 @@ func GetMonitors() []*Monitor {
 // GetPrimaryMonitor returns the primary monitor. This is usually the monitor
 // where elements like the Windows task bar or the OS X menu bar is located.
 func GetPrimaryMonitor() *Monitor {
-	m := C.glfwGetPrimaryMonitor()
-	panicError()
-	if m == nil {
-		return nil
-	}
-	return &Monitor{m}
+	// m := C.glfwGetPrimaryMonitor()
+	// panicError()
+	// if m == nil {
+	// 	return nil
+	// }
+	// return &Monitor{m}
+	return nil
 }
 
 // GetPos returns the position, in screen coordinates, of the upper-left
 // corner of the monitor.
 func (m *Monitor) GetPos() (x, y int) {
-	var xpos, ypos C.int
-	C.glfwGetMonitorPos(m.data, &xpos, &ypos)
+	var xpos, ypos int
+	// C.glfwGetMonitorPos(m.data, &xpos, &ypos)
 	panicError()
 	return int(xpos), int(ypos)
 }
@@ -88,8 +89,8 @@ func (m *Monitor) GetPos() (x, y int) {
 //
 // This function must only be called from the main thread.
 func (m *Monitor) GetWorkarea() (x, y, width, height int) {
-	var cX, cY, cWidth, cHeight C.int
-	C.glfwGetMonitorWorkarea(m.data, &cX, &cY, &cWidth, &cHeight)
+	var cX, cY, cWidth, cHeight int
+	// C.glfwGetMonitorWorkarea(m.data, &cX, &cY, &cWidth, &cHeight)
 	x, y, width, height = int(cX), int(cY), int(cWidth), int(cHeight)
 	return
 }
@@ -102,8 +103,8 @@ func (m *Monitor) GetWorkarea() (x, y, width, height int) {
 //
 // This function must only be called from the main thread.
 func (m *Monitor) GetContentScale() (float32, float32) {
-	var x, y C.float
-	C.glfwGetMonitorContentScale(m.data, &x, &y)
+	var x, y float32
+	// C.glfwGetMonitorContentScale(m.data, &x, &y)
 	return float32(x), float32(y)
 }
 
@@ -115,7 +116,7 @@ func (m *Monitor) GetContentScale() (float32, float32) {
 //
 // This function may be called from any thread. Access is not synchronized.
 func (m *Monitor) SetUserPointer(pointer unsafe.Pointer) {
-	C.glfwSetMonitorUserPointer(m.data, pointer)
+	// C.glfwSetMonitorUserPointer(m.data, pointer)
 }
 
 // GetUserPointer returns the current value of the user-defined pointer of the
@@ -126,7 +127,8 @@ func (m *Monitor) SetUserPointer(pointer unsafe.Pointer) {
 //
 // This function may be called from any thread. Access is not synchronized.
 func (m *Monitor) GetUserPointer() unsafe.Pointer {
-	return C.glfwGetMonitorUserPointer(m.data)
+	// return C.glfwGetMonitorUserPointer(m.data)
+	return nil
 }
 
 // GetPhysicalSize returns the size, in millimetres, of the display area of the
@@ -136,20 +138,21 @@ func (m *Monitor) GetUserPointer() unsafe.Pointer {
 // because the monitor's EDID data is incorrect, or because the driver does not
 // report it accurately.
 func (m *Monitor) GetPhysicalSize() (width, height int) {
-	var wi, h C.int
-	C.glfwGetMonitorPhysicalSize(m.data, &wi, &h)
+	var wi, h int
+	// C.glfwGetMonitorPhysicalSize(m.data, &wi, &h)
 	panicError()
 	return int(wi), int(h)
 }
 
 // GetName returns a human-readable name of the monitor, encoded as UTF-8.
 func (m *Monitor) GetName() string {
-	mn := C.glfwGetMonitorName(m.data)
-	panicError()
-	if mn == nil {
-		return ""
-	}
-	return C.GoString(mn)
+	// mn := C.glfwGetMonitorName(m.data)
+	// panicError()
+	// if mn == nil {
+	// 	return ""
+	// }
+	// return C.GoString(mn)
+	return ""
 }
 
 // MonitorCallback is the signature for monitor configuration callback
@@ -163,12 +166,12 @@ type MonitorCallback func(monitor *Monitor, event PeripheralEvent)
 // This function must only be called from the main thread.
 func SetMonitorCallback(cbfun MonitorCallback) MonitorCallback {
 	previous := fMonitorHolder
-	fMonitorHolder = cbfun
-	if cbfun == nil {
-		C.glfwSetMonitorCallback(nil)
-	} else {
-		C.glfwSetMonitorCallbackCB()
-	}
+	// fMonitorHolder = cbfun
+	// if cbfun == nil {
+	// 	C.glfwSetMonitorCallback(nil)
+	// } else {
+	// 	C.glfwSetMonitorCallbackCB()
+	// }
 	return previous
 }
 
@@ -179,18 +182,18 @@ func SetMonitorCallback(cbfun MonitorCallback) MonitorCallback {
 func (m *Monitor) GetVideoModes() []*VidMode {
 	var length int
 
-	vC := C.glfwGetVideoModes(m.data, (*C.int)(unsafe.Pointer(&length)))
-	panicError()
-	if vC == nil {
-		return nil
-	}
+	// vC := C.glfwGetVideoModes(m.data, (*C.int)(unsafe.Pointer(&length)))
+	// panicError()
+	// if vC == nil {
+	// 	return nil
+	// }
 
 	v := make([]*VidMode, length)
 
-	for i := 0; i < length; i++ {
-		t := C.GetVidmodeAtIndex(vC, C.int(i))
-		v[i] = &VidMode{int(t.width), int(t.height), int(t.redBits), int(t.greenBits), int(t.blueBits), int(t.refreshRate)}
-	}
+	// for i := 0; i < length; i++ {
+	// 	t := C.GetVidmodeAtIndex(vC, C.int(i))
+	// 	v[i] = &VidMode{int(t.width), int(t.height), int(t.redBits), int(t.greenBits), int(t.blueBits), int(t.refreshRate)}
+	// }
 
 	return v
 }
@@ -199,18 +202,19 @@ func (m *Monitor) GetVideoModes() []*VidMode {
 // are using a full screen window, the return value will therefore depend on
 // whether it is focused.
 func (m *Monitor) GetVideoMode() *VidMode {
-	t := C.glfwGetVideoMode(m.data)
-	if t == nil {
-		return nil
-	}
-	panicError()
-	return &VidMode{int(t.width), int(t.height), int(t.redBits), int(t.greenBits), int(t.blueBits), int(t.refreshRate)}
+	// t := C.glfwGetVideoMode(m.data)
+	// if t == nil {
+	// 	return nil
+	// }
+	// panicError()
+	// return &VidMode{int(t.width), int(t.height), int(t.redBits), int(t.greenBits), int(t.blueBits), int(t.refreshRate)}
+	return nil
 }
 
 // SetGamma generates a 256-element gamma ramp from the specified exponent and then calls
 // SetGamma with it.
 func (m *Monitor) SetGamma(gamma float32) {
-	C.glfwSetGamma(m.data, C.float(gamma))
+	//C.glfwSetGamma(m.data, C.float(gamma))
 	panicError()
 }
 
@@ -218,38 +222,38 @@ func (m *Monitor) SetGamma(gamma float32) {
 func (m *Monitor) GetGammaRamp() *GammaRamp {
 	var ramp GammaRamp
 
-	rampC := C.glfwGetGammaRamp(m.data)
-	panicError()
-	if rampC == nil {
-		return nil
-	}
+	// rampC := C.glfwGetGammaRamp(m.data)
+	// panicError()
+	// if rampC == nil {
+	// 	return nil
+	// }
 
-	length := int(rampC.size)
-	ramp.Red = make([]uint16, length)
-	ramp.Green = make([]uint16, length)
-	ramp.Blue = make([]uint16, length)
+	// length := int(rampC.size)
+	// ramp.Red = make([]uint16, length)
+	// ramp.Green = make([]uint16, length)
+	// ramp.Blue = make([]uint16, length)
 
-	for i := 0; i < length; i++ {
-		ramp.Red[i] = uint16(C.GetGammaAtIndex(rampC.red, C.int(i)))
-		ramp.Green[i] = uint16(C.GetGammaAtIndex(rampC.green, C.int(i)))
-		ramp.Blue[i] = uint16(C.GetGammaAtIndex(rampC.blue, C.int(i)))
-	}
+	// for i := 0; i < length; i++ {
+	// 	ramp.Red[i] = uint16(C.GetGammaAtIndex(rampC.red, C.int(i)))
+	// 	ramp.Green[i] = uint16(C.GetGammaAtIndex(rampC.green, C.int(i)))
+	// 	ramp.Blue[i] = uint16(C.GetGammaAtIndex(rampC.blue, C.int(i)))
+	// }
 
 	return &ramp
 }
 
 // SetGammaRamp sets the current gamma ramp for the monitor.
 func (m *Monitor) SetGammaRamp(ramp *GammaRamp) {
-	var rampC C.GLFWgammaramp
+	// var rampC C.GLFWgammaramp
 
-	length := len(ramp.Red)
+	// length := len(ramp.Red)
 
-	for i := 0; i < length; i++ {
-		C.SetGammaAtIndex(rampC.red, C.int(i), C.ushort(ramp.Red[i]))
-		C.SetGammaAtIndex(rampC.green, C.int(i), C.ushort(ramp.Green[i]))
-		C.SetGammaAtIndex(rampC.blue, C.int(i), C.ushort(ramp.Blue[i]))
-	}
+	// for i := 0; i < length; i++ {
+	// 	C.SetGammaAtIndex(rampC.red, C.int(i), C.ushort(ramp.Red[i]))
+	// 	C.SetGammaAtIndex(rampC.green, C.int(i), C.ushort(ramp.Green[i]))
+	// 	C.SetGammaAtIndex(rampC.blue, C.int(i), C.ushort(ramp.Blue[i]))
+	// }
 
-	C.glfwSetGammaRamp(m.data, &rampC)
-	panicError()
+	// C.glfwSetGammaRamp(m.data, &rampC)
+	// panicError()
 }
