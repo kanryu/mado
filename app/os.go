@@ -4,10 +4,6 @@ package app
 
 import (
 	"errors"
-
-	"github.com/kanryu/mado"
-
-	"github.com/kanryu/mado/io/system"
 )
 
 // errOutOfDate is reported when the GPU surface dimensions or properties no
@@ -54,7 +50,7 @@ var errOutOfDate = errors.New("app: GPU surface out of date")
 // 	}
 // }
 
-//type wakeupEvent struct{}
+// type wakeupEvent struct{}
 
 // // WindowMode is the window mode (WindowMode.Option sets it).
 // // Note that mode can be changed programatically as well as by the user
@@ -73,8 +69,8 @@ var errOutOfDate = errors.New("app: GPU surface out of date")
 // )
 
 // // Option changes the mode of a Window.
-// func (m WindowMode) Option() mado.Option {
-// 	return func(_ unit.Metric, cnf *mado.Config) {
+// func (m WindowMode) Option() Option {
+// 	return func(_ unit.Metric, cnf *Config) {
 // 		cnf.Mode = m
 // 	}
 // }
@@ -127,7 +123,7 @@ var errOutOfDate = errors.New("app: GPU surface out of date")
 // }
 
 // type frameEvent struct {
-// 	FrameEvent
+// 	mado.FrameEvent
 
 // 	Sync bool
 // }
@@ -157,7 +153,7 @@ var errOutOfDate = errors.New("app: GPU surface out of date")
 // 	// WriteClipboard requests a clipboard write.
 // 	WriteClipboard(mime string, s []byte)
 // 	// Configure the window.
-// 	Configure([]Option)
+// 	Configure([]mado.Option)
 // 	// SetCursor updates the current cursor to name.
 // 	SetCursor(cursor pointer.Cursor)
 // 	// Wakeup wakes up the event loop and sends a WakeupEvent.
@@ -168,52 +164,52 @@ var errOutOfDate = errors.New("app: GPU surface out of date")
 // 	EditorStateChanged(old, new editorState)
 // }
 
-type windowRendezvous struct {
-	in   chan windowAndConfig
-	out  chan windowAndConfig
-	errs chan error
-}
+// type windowRendezvous struct {
+// 	in   chan windowAndConfig
+// 	out  chan windowAndConfig
+// 	errs chan error
+// }
 
-type windowAndConfig struct {
-	window  *mado.Callbacks
-	options []mado.Option
-}
+// type windowAndConfig struct {
+// 	window  *callbacks
+// 	options []mado.Option
+// }
 
-func newWindowRendezvous() *windowRendezvous {
-	wr := &windowRendezvous{
-		in:   make(chan windowAndConfig),
-		out:  make(chan windowAndConfig),
-		errs: make(chan error),
-	}
-	go func() {
-		var main windowAndConfig
-		var out chan windowAndConfig
-		for {
-			select {
-			case w := <-wr.in:
-				var err error
-				if main.window != nil {
-					err = errors.New("multiple windows are not supported")
-				}
-				wr.errs <- err
-				main = w
-				out = wr.out
-			case out <- main:
-			}
-		}
-	}()
-	return wr
-}
+// func newWindowRendezvous() *windowRendezvous {
+// 	wr := &windowRendezvous{
+// 		in:   make(chan windowAndConfig),
+// 		out:  make(chan windowAndConfig),
+// 		errs: make(chan error),
+// 	}
+// 	go func() {
+// 		var main windowAndConfig
+// 		var out chan windowAndConfig
+// 		for {
+// 			select {
+// 			case w := <-wr.in:
+// 				var err error
+// 				if main.window != nil {
+// 					err = errors.New("multiple windows are not supported")
+// 				}
+// 				wr.errs <- err
+// 				main = w
+// 				out = wr.out
+// 			case out <- main:
+// 			}
+// 		}
+// 	}()
+// 	return wr
+// }
 
-//func (wakeupEvent) ImplementsEvent() {}
+// func (wakeupEvent) ImplementsEvent() {}
 
-//func (ConfigEvent) ImplementsEvent() {}
+// func (ConfigEvent) ImplementsEvent() {}
 
-func walkActions(actions system.Action, do func(system.Action)) {
-	for a := system.Action(1); actions != 0; a <<= 1 {
-		if actions&a != 0 {
-			actions &^= a
-			do(a)
-		}
-	}
-}
+// func walkActions(actions system.Action, do func(system.Action)) {
+// 	for a := system.Action(1); actions != 0; a <<= 1 {
+// 		if actions&a != 0 {
+// 			actions &^= a
+// 			do(a)
+// 		}
+// 	}
+// }

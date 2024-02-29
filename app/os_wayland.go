@@ -22,7 +22,6 @@ import (
 
 	syscall "golang.org/x/sys/unix"
 
-	"github.com/kanryu/mado"
 	"github.com/kanryu/mado/app/internal/xkb"
 	"github.com/kanryu/mado/f32"
 	"github.com/kanryu/mado/internal/fling"
@@ -1366,7 +1365,7 @@ func (w *window) loop() error {
 		case e := <-w.clipReads:
 			w.w.Event(e)
 		case <-w.wakeups:
-			w.w.Event(mado.WakeupEvent{})
+			w.w.Event(wakeupEvent{})
 		default:
 		}
 		if w.dead {

@@ -13,7 +13,6 @@ import (
 	"unicode"
 	"unicode/utf8"
 
-	"github.com/kanryu/mado"
 	"github.com/kanryu/mado/internal/f32color"
 
 	"github.com/kanryu/mado/f32"
@@ -70,7 +69,7 @@ type window struct {
 	contextStatus contextStatus
 }
 
-func NewWindow(win *callbacks, options []Option) error {
+func newWindow(win *callbacks, options []Option) error {
 	doc := js.Global().Get("document")
 	cont := getContainer(doc)
 	cnv := createCanvas(doc)
@@ -127,7 +126,7 @@ func NewWindow(win *callbacks, options []Option) error {
 		for {
 			select {
 			case <-w.wakeups:
-				w.w.Event(mado.WakeupEvent{})
+				w.w.Event(wakeupEvent{})
 			case <-w.chanAnimation:
 				w.animCallback()
 			case <-w.chanRedraw:

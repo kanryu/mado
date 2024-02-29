@@ -247,8 +247,6 @@ type ViewEvent struct {
 	Layer uintptr
 }
 
-var _ mado.Driver = (*window)(nil)
-
 type window struct {
 	view        C.CFTypeRef
 	w           mado.Callbacks
@@ -437,7 +435,7 @@ func (w *window) setTitle(prev, cnf mado.Config) {
 
 func (w *window) Perform(acts system.Action) {
 	window := C.windowForView(w.view)
-	walkActions(acts, func(a system.Action) {
+	mado.WalkActions(acts, func(a system.Action) {
 		switch a {
 		case system.ActionCenter:
 			r := C.getScreenFrame(window) // the screen size of the window
@@ -805,7 +803,7 @@ func configFor(scale float32) unit.Metric {
 func gio_onClose(view C.CFTypeRef) {
 	w := mustView(view)
 	w.w.Event(ViewEvent{})
-	w.w.Event(DestroyEvent{})
+	w.w.Event(mado.DestroyEvent{})
 	w.displayLink.Close()
 	w.displayLink = nil
 	deleteView(view)
@@ -858,7 +856,7 @@ func gio_onFinishLaunching() {
 	close(launched)
 }
 
-func NewWindow(win mado.Callbacks, options []mado.Option) error {
+func newWindow(win *callbacks, options []mado.Option) error {
 	<-launched
 	errch := make(chan error)
 	runOnMain(func() {
@@ -1005,5 +1003,4 @@ func convertMods(mods C.NSUInteger) key.Modifiers {
 	return kmods
 }
 
-func (_ ViewEvent) ImplementsEvent()     {}
-func (_ ViewEvent) ImplementsViewEvent() {}
+func (_ ViewEvent) ImplementsEvent() {}

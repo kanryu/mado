@@ -4,7 +4,7 @@
 Package app provides a platform-independent interface to operating system
 functionality for running graphical user interfaces.
 
-See https://gioui.org for instructions to set up and run Gio programs.
+See https://github.com/kanryu/mado for instructions to set up and run Gio programs.
 
 # Windows
 
@@ -57,9 +57,9 @@ For example, to display a blank but otherwise functional window:
 
 # Permissions
 
-The packages under gioui.org/app/permission should be imported
+The packages under github.com/kanryu/mado/app/permission should be imported
 by a Gio program or by one of its dependencies to indicate that specific
 operating-system permissions are required.  Please see documentation for
-package gioui.org/app/permission for more information.
+package github.com/kanryu/mado/app/permission for more information.
 */
 package app

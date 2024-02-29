@@ -2,13 +2,13 @@
 
 package app
 
-// DestroyEvent is the last event sent through
-// a window event channel.
-type DestroyEvent struct {
-	// Err is nil for normal window closures. If a
-	// window is prematurely closed, Err is the cause.
-	Err error
-}
+// // DestroyEvent is the last event sent through
+// // a window event channel.
+// type DestroyEvent struct {
+// 	// Err is nil for normal window closures. If a
+// 	// window is prematurely closed, Err is the cause.
+// 	Err error
+// }
 
 // A StageEvent is generated whenever the stage of a
 // Window changes.
@@ -45,5 +45,6 @@ func (l Stage) String() string {
 	}
 }
 
-func (StageEvent) ImplementsEvent()   {}
-func (DestroyEvent) ImplementsEvent() {}
+func (StageEvent) ImplementsEvent() {}
+
+// func (DestroyEvent) ImplementsEvent() {}

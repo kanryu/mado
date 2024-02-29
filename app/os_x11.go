@@ -37,7 +37,6 @@ import (
 	"time"
 	"unsafe"
 
-	"github.com/kanryu/mado"
 	"github.com/kanryu/mado/f32"
 	"github.com/kanryu/mado/io/key"
 	"github.com/kanryu/mado/io/pointer"
@@ -120,7 +119,7 @@ var (
 )
 
 // X11 and Vulkan doesn't work reliably on NVIDIA systems.
-// See https://gioui.org/issue/347.
+// See https://github.com/kanryu/mado/issue/347.
 const vulkanBuggy = true
 
 func (w *x11Window) NewContext() (context, error) {
@@ -455,7 +454,7 @@ loop:
 		}
 		select {
 		case <-w.wakeups:
-			w.w.Event(mado.WakeupEvent{})
+			w.w.Event(wakeupEvent{})
 		default:
 		}
 

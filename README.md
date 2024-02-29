@@ -2,7 +2,7 @@
 
 [Mado](https://github.com/kanryu/mado) is an window/framebuffer client for Windows/Mac/Linux.
 
-Based a lot on [Gio UI](https://gioui.org/).
+Based a lot on [Gio UI](https://github.com/kanryu/mado/).
 
 Currently, WIP.
 

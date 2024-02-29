@@ -49,7 +49,7 @@ type windowDriver func(*callbacks, []Option) error
 // let each driver initialize these variables with their own version of createWindow.
 var wlDriver, x11Driver windowDriver
 
-func NewWindow(window *callbacks, options []Option) error {
+func newWindow(window *callbacks, options []Option) error {
 	var errFirst error
 	for _, d := range []windowDriver{wlDriver, x11Driver} {
 		if d == nil {
