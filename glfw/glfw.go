@@ -1,7 +1,24 @@
 package glfw
 
 import (
+	"context"
 	"fmt"
+	"os"
+	"os/signal"
+	"reflect"
+	"sync"
+
+	"github.com/kanryu/mado"
+	"github.com/kanryu/mado/app"
+	"github.com/kanryu/mado/font/gofont"
+	"github.com/kanryu/mado/io/event"
+	"github.com/kanryu/mado/io/key"
+	"github.com/kanryu/mado/io/pointer"
+	"github.com/kanryu/mado/io/system"
+	"github.com/kanryu/mado/layout"
+	"github.com/kanryu/mado/op"
+	"github.com/kanryu/mado/text"
+	"github.com/kanryu/mado/widget/material"
 )
 
 // Version constants.
@@ -10,6 +27,134 @@ const (
 	VersionMinor    = 3 // This is incremented when features are added to the API but it remains backward-compatible.
 	VersionRevision = 9 // This is incremented when a bug fix release is made that does not contain any API changes.
 )
+
+type WindowEvent struct {
+	w *Window
+	e event.Event
+}
+
+var theApp *Application
+
+// Application keeps track of all the windows and global state.
+type Application struct {
+	// Context is used to broadcast application shutdown.
+	Context context.Context
+	Stop    context.CancelFunc
+	// Shutdown shuts down all windows.
+	Shutdown func()
+	// active keeps track the open windows, such that application
+	// can shut down, when all of them are closed.
+	active sync.WaitGroup
+
+	chans      []chan WindowEvent
+	eventCases []reflect.SelectCase
+	windowList []*Window
+}
+
+func NewApplication(ctx context.Context, stop context.CancelFunc) *Application {
+	ctx, cancel := context.WithCancel(ctx)
+	return &Application{
+		Context:  ctx,
+		Stop:     stop,
+		Shutdown: cancel,
+	}
+}
+
+func (a *Application) appendWindow(w *Window) {
+	windows.put(w)
+
+	ch := make(chan WindowEvent)
+	a.chans = append(a.chans, ch)
+	a.eventCases = append(a.eventCases, reflect.SelectCase{Dir: reflect.SelectRecv, Chan: reflect.ValueOf(ch)})
+	a.windowList = append(a.windowList, w)
+	a.active.Add(1)
+
+	go func() {
+		tag := new(int)
+		var ops op.Ops
+		for {
+			e := w.data.NextEvent()
+			ch <- WindowEvent{w: w, e: e}
+			switch e2 := e.(type) {
+			case mado.DestroyEvent:
+				w.shouldClose = true
+				close(ch)
+				return
+			case mado.FrameEvent:
+				gtx := app.NewContext(&ops, e2)
+				for {
+					ev, ok := gtx.Source.Event(pointer.Filter{
+						Target: tag,
+						Kinds:  pointer.Release,
+					})
+					if !ok {
+						break
+					}
+					switch ev := ev.(type) {
+					case pointer.Event:
+						if ev.Kind == pointer.Release {
+							gtx.Execute(key.FocusCmd{Tag: tag})
+							fmt.Println("triggered focus command")
+						}
+					}
+					fmt.Printf("%#+v\n", ev)
+				}
+				for {
+					ev, ok := gtx.Source.Event(key.Filter{
+						Focus: tag,
+					})
+					if !ok {
+						break
+					}
+					fmt.Printf("%#+v\n", ev)
+				}
+				event.Op(gtx.Ops, tag)
+				e2.Frame(gtx.Ops)
+			}
+		}
+	}()
+
+	// go func() {
+	// 	defer a.active.Done()
+	// 	a.Run(w)
+	// }()
+}
+
+// Wait waits for all windows to close.
+func (a *Application) Wait() {
+	a.active.Wait()
+}
+
+// View describes .
+type View interface {
+	// Run handles the window event loop.
+	Run(w *Window) error
+}
+
+// WidgetView allows to use layout.Widget as a view.
+type WidgetView func(gtx layout.Context, th *material.Theme) layout.Dimensions
+
+// Run displays the widget with default handling.
+func (a *Application) Run(w *Window) error {
+	var ops op.Ops
+
+	th := material.NewTheme()
+	th.Shaper = text.NewShaper(text.WithCollection(gofont.Collection()))
+
+	go func() {
+		<-w.App.Context.Done()
+		w.data.Perform(system.ActionClose)
+	}()
+	for {
+		switch e := w.data.NextEvent().(type) {
+		case mado.DestroyEvent:
+			return e.Err
+		case mado.FrameEvent:
+			gtx := app.NewContext(&ops, e)
+			e.Frame(gtx.Ops)
+		}
+	}
+}
 
 // Init initializes the GLFW library. Before most GLFW functions can be used,
 // GLFW must be initialized, and before a program terminates GLFW should be
@@ -31,7 +176,8 @@ const (
 //
 // This function may only be called from the main thread.
 func Init() error {
-	fmt.Println("not implemented")
+	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt)
+	theApp = NewApplication(ctx, stop)
 	return acceptError(APIUnavailable)
 }
 
@@ -46,8 +192,91 @@ func Init() error {
 //
 // This function may only be called from the main thread.
 func Terminate() {
+	theApp.Stop()
 	flushErrors()
 	fmt.Println("not implemented")
+}
+
+// PollEvents processes only those events that have already been received and
+// then returns immediately. Processing events will cause the window and input
+// callbacks associated with those events to be called.
+//
+// This function is not required for joystick input to work.
+//
+// This function may not be called from a callback.
+//
+// This function may only be called from the main thread.
+func PollEvents() {
+	remaining := len(theApp.eventCases)
+	if remaining <= 0 {
+		return
+	}
+	chosen, _, ok := reflect.Select(theApp.eventCases)
+	if !ok {
+		// remove evantCase
+		theApp.chans = append(theApp.chans[:chosen], theApp.chans[chosen+1:]...)
+		theApp.eventCases = append(theApp.eventCases[:chosen], theApp.eventCases[chosen+1:]...)
+		theApp.windowList = append(theApp.windowList[:chosen], theApp.windowList[chosen+1:]...)
+		remaining -= 1
+	}
+	panicError()
+}
+
+// WaitEvents puts the calling thread to sleep until at least one event has been
+// received. Once one or more events have been recevied, it behaves as if
+// PollEvents was called, i.e. the events are processed and the function then
+// returns immediately. Processing events will cause the window and input
+// callbacks associated with those events to be called.
+//
+// Since not all events are associated with callbacks, this function may return
+// without a callback having been called even if you are monitoring all
+// callbacks.
+//
+// This function may not be called from a callback.
+//
+// This function may only be called from the main thread.
+func WaitEvents() {
+	fmt.Println("not implemented")
+	panicError()
+}
+
+// WaitEventsTimeout puts the calling thread to sleep until at least one event is available in the
+// event queue, or until the specified timeout is reached. If one or more events are available,
+// it behaves exactly like PollEvents, i.e. the events in the queue are processed and the function
+// then returns immediately. Processing events will cause the window and input callbacks associated
+// with those events to be called.
+//
+// The timeout value must be a positive finite number.
+//
+// Since not all events are associated with callbacks, this function may return without a callback
+// having been called even if you are monitoring all callbacks.
+//
+// On some platforms, a window move, resize or menu operation will cause event processing to block.
+// This is due to how event processing is designed on those platforms. You can use the window
+// refresh callback to redraw the contents of your window when necessary during such operations.
+//
+// On some platforms, certain callbacks may be called outside of a call to one of the event
+// processing functions.
+//
+// If no windows exist, this function returns immediately. For synchronization of threads in
+// applications that do not create windows, use native Go primitives.
+//
+// Event processing is not required for joystick input to work.
+func WaitEventsTimeout(timeout float64) {
+	fmt.Println("not implemented")
+	panicError()
+}
+
+// PostEmptyEvent posts an empty event from the current thread to the main
+// thread event queue, causing WaitEvents to return.
+//
+// If no windows exist, this function returns immediately. For synchronization of threads in
+// applications that do not create windows, use native Go primitives.
+//
+// This function may be called from secondary threads.
+func PostEmptyEvent() {
+	fmt.Println("not implemented")
+	panicError()
 }
 
 // InitHint function sets hints for the next initialization of GLFW.

@@ -7,6 +7,7 @@ package app
 import (
 	"golang.org/x/sys/windows"
 
+	"github.com/kanryu/mado"
 	"github.com/kanryu/mado/internal/egl"
 )
 
@@ -18,7 +19,7 @@ type glContext struct {
 func init() {
 	drivers = append(drivers, gpuAPI{
 		priority: 2,
-		initializer: func(w *window) (context, error) {
+		initializer: func(w *window) (mado.Context, error) {
 			disp := egl.NativeDisplayType(w.HDC())
 			ctx, err := egl.NewContext(disp)
 			if err != nil {

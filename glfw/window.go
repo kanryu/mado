@@ -160,6 +160,7 @@ const (
 
 // Window represents a window.
 type Window struct {
+	App       *Application
 	data      *app.Window
 	callbacks *Callbacks
 	pointer   unsafe.Pointer
@@ -239,11 +240,12 @@ type Window struct {
 func CreateWindow(width, height int, title string, monitor *Monitor, share *Window) (*Window, error) {
 	c := &Callbacks{}
 	w := app.NewWindow(c)
-	c.W = w
 	wnd := &Window{
+		App:       theApp,
 		data:      w,
 		callbacks: c,
 	}
+	theApp.appendWindow(wnd)
 	return wnd, nil
 }
 
@@ -727,75 +729,4 @@ func (w *Window) GetClipboardString() string {
 	// There is probably no way to retrieve the clipboard synchronously due to the current geoui design.
 	fmt.Println("not implemented")
 	return ""
-}
-
-// PollEvents processes only those events that have already been received and
-// then returns immediately. Processing events will cause the window and input
-// callbacks associated with those events to be called.
-//
-// This function is not required for joystick input to work.
-//
-// This function may not be called from a callback.
-//
-// This function may only be called from the main thread.
-func PollEvents() {
-	fmt.Println("not implemented")
-	panicError()
-}
-
-// WaitEvents puts the calling thread to sleep until at least one event has been
-// received. Once one or more events have been recevied, it behaves as if
-// PollEvents was called, i.e. the events are processed and the function then
-// returns immediately. Processing events will cause the window and input
-// callbacks associated with those events to be called.
-//
-// Since not all events are associated with callbacks, this function may return
-// without a callback having been called even if you are monitoring all
-// callbacks.
-//
-// This function may not be called from a callback.
-//
-// This function may only be called from the main thread.
-func WaitEvents() {
-	fmt.Println("not implemented")
-	panicError()
-}
-
-// WaitEventsTimeout puts the calling thread to sleep until at least one event is available in the
-// event queue, or until the specified timeout is reached. If one or more events are available,
-// it behaves exactly like PollEvents, i.e. the events in the queue are processed and the function
-// then returns immediately. Processing events will cause the window and input callbacks associated
-// with those events to be called.
-//
-// The timeout value must be a positive finite number.
-//
-// Since not all events are associated with callbacks, this function may return without a callback
-// having been called even if you are monitoring all callbacks.
-//
-// On some platforms, a window move, resize or menu operation will cause event processing to block.
-// This is due to how event processing is designed on those platforms. You can use the window
-// refresh callback to redraw the contents of your window when necessary during such operations.
-//
-// On some platforms, certain callbacks may be called outside of a call to one of the event
-// processing functions.
-//
-// If no windows exist, this function returns immediately. For synchronization of threads in
-// applications that do not create windows, use native Go primitives.
-//
-// Event processing is not required for joystick input to work.
-func WaitEventsTimeout(timeout float64) {
-	fmt.Println("not implemented")
-	panicError()
-}
-
-// PostEmptyEvent posts an empty event from the current thread to the main
-// thread event queue, causing WaitEvents to return.
-//
-// If no windows exist, this function returns immediately. For synchronization of threads in
-// applications that do not create windows, use native Go primitives.
-//
-// This function may be called from secondary threads.
-func PostEmptyEvent() {
-	fmt.Println("not implemented")
-	panicError()
 }

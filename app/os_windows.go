@@ -18,6 +18,7 @@ import (
 
 	syscall "golang.org/x/sys/windows"
 
+	"github.com/kanryu/mado"
 	"github.com/kanryu/mado/app/internal/windows"
 	"github.com/kanryu/mado/unit"
 	gowindows "golang.org/x/sys/windows"
@@ -33,10 +34,12 @@ type ViewEvent struct {
 	HWND uintptr
 }
 
+var _ mado.Driver = (*window)(nil)
+
 type window struct {
 	hwnd        syscall.Handle
 	hdc         syscall.Handle
-	w           *callbacks
+	w           mado.Callbacks
 	stage       Stage
 	pointerBtns pointer.Buttons
 
@@ -52,14 +55,14 @@ type window struct {
 	focused   bool
 
 	borderSize image.Point
-	config     Config
+	config     mado.Config
 }
 
 const _WM_WAKEUP = windows.WM_USER + iota
 
 type gpuAPI struct {
 	priority    int
-	initializer func(w *window) (context, error)
+	initializer func(w *window) (mado.Context, error)
 }
 
 // drivers is the list of potential Context implementations.
@@ -85,7 +88,7 @@ func osMain() {
 	select {}
 }
 
-func newWindow(window *callbacks, options []Option) error {
+func newWindow(window mado.Callbacks, options []mado.Option) error {
 	cerr := make(chan error)
 	go func() {
 		// GetMessage and PeekMessage can filter on a window HWND, but
@@ -197,7 +200,7 @@ func (w *window) update() {
 		windows.GetSystemMetrics(windows.SM_CXSIZEFRAME),
 		windows.GetSystemMetrics(windows.SM_CYSIZEFRAME),
 	)
-	w.w.Event(ConfigEvent{Config: w.config})
+	w.w.Event(mado.ConfigEvent{Config: w.config})
 }
 
 func windowProc(hwnd syscall.Handle, msg uint32, wParam, lParam uintptr) uintptr {
@@ -302,7 +305,7 @@ func windowProc(hwnd syscall.Handle, msg uint32, wParam, lParam uintptr) uintptr
 		w.scrollEvent(wParam, lParam, true, getModifiers())
 	case windows.WM_DESTROY:
 		w.w.Event(ViewEvent{})
-		w.w.Event(DestroyEvent{})
+		w.w.Event(mado.DestroyEvent{})
 		if w.hdc != 0 {
 			windows.ReleaseDC(w.hdc)
 			w.hdc = 0
@@ -338,14 +341,14 @@ func windowProc(hwnd syscall.Handle, msg uint32, wParam, lParam uintptr) uintptr
 		w.update()
 		switch wParam {
 		case windows.SIZE_MINIMIZED:
-			w.config.Mode = Minimized
+			w.config.Mode = mado.Minimized
 			w.setStage(StagePaused)
 		case windows.SIZE_MAXIMIZED:
-			w.config.Mode = Maximized
+			w.config.Mode = mado.Maximized
 			w.setStage(StageRunning)
 		case windows.SIZE_RESTORED:
-			if w.config.Mode != Fullscreen {
-				w.config.Mode = Windowed
+			if w.config.Mode != mado.Fullscreen {
+				w.config.Mode = mado.Windowed
 			}
 			w.setStage(StageRunning)
 		}
@@ -378,7 +381,7 @@ func windowProc(hwnd syscall.Handle, msg uint32, wParam, lParam uintptr) uintptr
 			return windows.TRUE
 		}
 	case _WM_WAKEUP:
-		w.w.Event(wakeupEvent{})
+		w.w.Event(mado.WakeupEvent{})
 	case windows.WM_IME_STARTCOMPOSITION:
 		imc := windows.ImmGetContext(w.hwnd)
 		if imc == 0 {
@@ -397,7 +400,7 @@ func windowProc(hwnd syscall.Handle, msg uint32, wParam, lParam uintptr) uintptr
 		}
 		defer windows.ImmReleaseContext(w.hwnd, imc)
 		state := w.w.EditorState()
-		rng := state.compose
+		rng := state.Compose
 		if rng.Start == -1 {
 			rng = state.Selection.Range
 		}
@@ -458,10 +461,10 @@ func getModifiers() key.Modifiers {
 // hitTest returns the non-client area hit by the point, needed to
 // process WM_NCHITTEST.
 func (w *window) hitTest(x, y int) uintptr {
-	if w.config.Mode == Fullscreen {
+	if w.config.Mode == mado.Fullscreen {
 		return windows.HTCLIENT
 	}
-	if w.config.Mode != Windowed {
+	if w.config.Mode != mado.Windowed {
 		// Only windowed mode should allow resizing.
 		return windows.HTCLIENT
 	}
@@ -587,7 +590,7 @@ loop:
 	return nil
 }
 
-func (w *window) EditorStateChanged(old, new editorState) {
+func (w *window) EditorStateChanged(old, new mado.EditorState) {
 	imc := windows.ImmGetContext(w.hwnd)
 	if imc == 0 {
 		return
@@ -621,17 +624,15 @@ func (w *window) draw(sync bool) {
 	}
 	dpi := windows.GetWindowDPI(w.hwnd)
 	cfg := configForDPI(dpi)
-	w.w.Event(frameEvent{
-		FrameEvent: FrameEvent{
-			Now:    time.Now(),
-			Size:   w.config.Size,
-			Metric: cfg,
-		},
-		Sync: sync,
+	w.w.Event(mado.FrameEvent{
+		Now:    time.Now(),
+		Size:   w.config.Size,
+		Metric: cfg,
+		Sync:   sync,
 	})
 }
 
-func (w *window) NewContext() (context, error) {
+func (w *window) NewContext() (mado.Context, error) {
 	sort.Slice(drivers, func(i, j int) bool {
 		return drivers[i].priority < drivers[j].priority
 	})
@@ -677,10 +678,10 @@ func (w *window) readClipboard() error {
 	return nil
 }
 
-func (w *window) Configure(options []Option) {
+func (w *window) Configure(options []mado.Option) {
 	dpi := windows.GetSystemDPI()
 	metric := configForDPI(dpi)
-	w.config.apply(metric, options)
+	w.config.Apply(metric, options)
 	windows.SetWindowText(w.hwnd, w.config.Title)
 
 	style := windows.GetWindowLong(w.hwnd, windows.GWL_STYLE)
@@ -690,17 +691,17 @@ func (w *window) Configure(options []Option) {
 	winStyle := uintptr(windows.WS_OVERLAPPEDWINDOW)
 	style &^= winStyle
 	switch w.config.Mode {
-	case Minimized:
+	case mado.Minimized:
 		style |= winStyle
 		swpStyle |= windows.SWP_NOMOVE | windows.SWP_NOSIZE
 		showMode = windows.SW_SHOWMINIMIZED
 
-	case Maximized:
+	case mado.Maximized:
 		style |= winStyle
 		swpStyle |= windows.SWP_NOMOVE | windows.SWP_NOSIZE
 		showMode = windows.SW_SHOWMAXIMIZED
 
-	case Windowed:
+	case mado.Windowed:
 		style |= winStyle
 		showMode = windows.SW_SHOWNORMAL
 		// Get target for client area size.
@@ -726,7 +727,7 @@ func (w *window) Configure(options []Option) {
 			windows.DwmExtendFrameIntoClientArea(w.hwnd, windows.Margins{-1, -1, -1, -1})
 		}
 
-	case Fullscreen:
+	case mado.Fullscreen:
 		swpStyle |= windows.SWP_NOMOVE | windows.SWP_NOSIZE
 		mi := windows.GetMonitorInfo(w.hwnd)
 		x, y = mi.Monitor.Left, mi.Monitor.Top
@@ -842,10 +843,10 @@ func (w *window) HWND() (syscall.Handle, int, int) {
 }
 
 func (w *window) Perform(acts system.Action) {
-	walkActions(acts, func(a system.Action) {
+	mado.WalkActions(acts, func(a system.Action) {
 		switch a {
 		case system.ActionCenter:
-			if w.config.Mode != Windowed {
+			if w.config.Mode != mado.Windowed {
 				break
 			}
 			r := windows.GetWindowRect(w.hwnd)

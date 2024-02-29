@@ -2,35 +2,36 @@ package main
 
 import (
 	"fmt"
+	"reflect"
 )
 
-type Dog interface {
-	Greet()
-}
-
-var _ Dog = (*DogA)(nil)
-
-type DogA struct {
-	Name string
-}
-
-func (d *DogA) Greet() {
-	fmt.Println("greet", d.Name)
-}
-
-var _ Dog = (*DogB)(nil)
-
-type DogB struct {
-	DogA
-}
-
-func (d *DogB) Greet() {
-	fmt.Println("DogB greet", d.Name)
-}
-
 func main() {
-	dogs := []Dog{&DogA{Name: "ken"}, &DogB{DogA{Name: "bow"}}}
-	for _, d := range dogs {
-		d.Greet()
+	numChans := 5
+	var chans []chan struct{}
+
+	for i := 0; i < numChans; i++ {
+		tmp := make(chan struct{})
+		chans = append(chans, tmp)
+		go DoFunc(tmp)
 	}
+
+	cases := make([]reflect.SelectCase, len(chans))
+	for i, ch := range chans {
+		cases[i] = reflect.SelectCase{Dir: reflect.SelectRecv, Chan: reflect.ValueOf(ch)}
+	}
+	remaining := len(cases)
+	for remaining > 0 {
+		chosen, _, ok := reflect.Select(cases)
+		if !ok {
+			cases[chosen].Chan = reflect.ValueOf(nil)
+			remaining -= 1
+			continue
+		}
+		fmt.Println(chosen)
+	}
+}
+
+func DoFunc(c chan<- struct{}) {
+	c <- struct{}{}
+	close(c)
 }

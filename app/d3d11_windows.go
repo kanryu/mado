@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"unsafe"
 
+	"github.com/kanryu/mado"
 	"github.com/kanryu/mado/gpu"
 	"github.com/kanryu/mado/internal/d3d11"
 )
@@ -25,7 +26,7 @@ const debugDirectX = false
 func init() {
 	drivers = append(drivers, gpuAPI{
 		priority: 1,
-		initializer: func(w *window) (context, error) {
+		initializer: func(w *window) (mado.Context, error) {
 			hwnd, _, _ := w.HWND()
 			var flags uint32
 			if debugDirectX {

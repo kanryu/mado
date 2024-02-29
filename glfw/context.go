@@ -2,6 +2,8 @@ package glfw
 
 import (
 	"fmt"
+	"runtime"
+	"unsafe"
 
 	"github.com/kanryu/mado/app"
 )
@@ -14,7 +16,7 @@ func (w *Window) MakeContextCurrent() {
 	go func() {
 		runtime.LockOSThread()
 		app.Main()
-	}
+	}()
 	panicError()
 }
 
