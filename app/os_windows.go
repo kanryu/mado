@@ -84,8 +84,24 @@ var resources struct {
 	cursor syscall.Handle
 }
 
+var withPollEvents bool
+
 func osMain() {
-	select {}
+	if !withPollEvents {
+		select {}
+	}
+}
+
+func EnablePollEvents() {
+	withPollEvents = true
+}
+
+func PollEvents() {
+	msg := windows.Msg{}
+	for windows.PeekMessage(&msg, 0, 0, 0, windows.PM_REMOVE) {
+		windows.TranslateMessage(&msg)
+		windows.DispatchMessage(&msg)
+	}
 }
 
 func newWindow(window mado.Callbacks, options []mado.Option) error {
