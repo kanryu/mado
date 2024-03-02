@@ -1,6 +1,7 @@
 package glfw
 
 import (
+	"image"
 	"time"
 	"unicode/utf8"
 
@@ -26,6 +27,7 @@ type Callbacks struct {
 	PrevWindowMode  mado.WindowMode
 	PrevWindowStage mado.Stage
 	PrevMetric      unit.Metric
+	PrevWindowSize  image.Point
 	PrevCursorPos   f32.Point
 	PrevModifiers   key.Modifiers
 	WaitEvents      []event.Event
@@ -101,7 +103,11 @@ func (c *Callbacks) Event(e event.Event) bool {
 		case window.MoveEvent:
 			c.Gw.fPosHolder(c.Gw, e2.Pos.X, e2.Pos.Y)
 		case window.SizeEvent:
-			c.Gw.fSizeHolder(c.Gw, e2.Size.X, e2.Size.Y)
+			if c.PrevWindowSize != e2.Size {
+				c.Gw.fFramebufferSizeHolder(c.Gw, e2.Size.X, e2.Size.Y)
+				c.Gw.fSizeHolder(c.Gw, e2.Size.X, e2.Size.Y)
+				c.PrevWindowSize = e2.Size
+			}
 		case window.CloseEvent:
 			c.Gw.fCloseHolder(c.Gw)
 		case pointer.Event:
