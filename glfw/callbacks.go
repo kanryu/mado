@@ -12,16 +12,19 @@ import (
 	"github.com/kanryu/mado/io/key"
 	"github.com/kanryu/mado/io/pointer"
 	"github.com/kanryu/mado/io/system"
+	"github.com/kanryu/mado/io/window"
 )
 
 var _ mado.Callbacks = (*Callbacks)(nil)
 
 type Callbacks struct {
-	W          *app.Window
-	Gw         *Window
-	D          mado.Driver
-	Busy       bool
-	WaitEvents []event.Event
+	W               *app.Window
+	Gw              *Window
+	D               mado.Driver
+	Busy            bool
+	PrevWindowMode  mado.WindowMode
+	PrevWindowStage mado.Stage
+	WaitEvents      []event.Event
 }
 
 func (c *Callbacks) SetWindow(w mado.Window) {
@@ -53,10 +56,42 @@ func (c *Callbacks) Event(e event.Event) bool {
 	var handled bool
 	for len(c.WaitEvents) > 0 {
 		e := c.WaitEvents[0]
-		copy(c.WaitEvents, c.WaitEvents[1:])
-		c.WaitEvents = c.WaitEvents[:len(c.WaitEvents)-1]
+		// copy(c.WaitEvents, c.WaitEvents[1:])
+		// c.WaitEvents = c.WaitEvents[:len(c.WaitEvents)-1]
+		c.WaitEvents = append([]event.Event{}, c.WaitEvents[1:]...)
 		handled = c.W.ProcessEvent(c.D, e)
+		// POST events to glfw callbacks
 		switch e2 := e.(type) {
+		case mado.StageEvent:
+			switch e2.Stage {
+			case mado.StagePaused:
+				if c.W.Decorations.Config.Mode == mado.Minimized {
+					c.Gw.fIconifyHolder(c.Gw, true)
+					c.PrevWindowMode = mado.Minimized
+				}
+			case mado.StageRunning:
+				if c.W.Decorations.Config.Mode == mado.Maximized {
+					c.Gw.fMaximizeHolder(c.Gw, true)
+					c.PrevWindowMode = mado.Maximized
+				}
+				if c.W.Decorations.Config.Mode == mado.Windowed {
+					if c.PrevWindowStage == mado.StageInactive {
+						c.Gw.fFocusHolder(c.Gw, true)
+					} else if c.PrevWindowMode == mado.Minimized {
+						c.Gw.fIconifyHolder(c.Gw, false)
+					} else if c.PrevWindowMode != mado.Windowed {
+						c.Gw.fMaximizeHolder(c.Gw, false)
+					}
+					c.PrevWindowMode = mado.Windowed
+				}
+			case mado.StageInactive:
+				c.Gw.fFocusHolder(c.Gw, false)
+				c.PrevWindowStage = mado.StageInactive
+			}
+		case window.MoveEvent:
+			c.Gw.fPosHolder(c.Gw, e2.Pos.X, e2.Pos.Y)
+		case window.SizeEvent:
+			c.Gw.fSizeHolder(c.Gw, e2.Size.X, e2.Size.Y)
 		case pointer.Event:
 			c.Gw.fMouseButtonHolder(c.Gw, MouseButton(e2.Buttons), Action(e2.Kind), ModifierKey(e2.Modifiers))
 		case key.Event:

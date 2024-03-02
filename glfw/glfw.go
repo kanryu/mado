@@ -82,10 +82,8 @@ func (a *Application) run(w *Window) {
 				case pointer.Event:
 					if ev.Kind == pointer.Release {
 						gtx.Execute(key.FocusCmd{Tag: tag})
-						fmt.Println("triggered focus command")
 					}
 				}
-				fmt.Printf("%#+v\n", ev)
 			}
 			for {
 				ev, ok := gtx.Source.Event(key.Filter{

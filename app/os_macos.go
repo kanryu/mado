@@ -252,7 +252,7 @@ type ViewEvent struct {
 type window struct {
 	view        C.CFTypeRef
 	w           mado.Callbacks
-	stage       Stage
+	stage       mado.Stage
 	displayLink *displayLink
 	// redraw is a single entry channel for making sure only one
 	// display link redraw request is in flight.
@@ -491,12 +491,12 @@ func (w *window) runOnMain(f func()) {
 	})
 }
 
-func (w *window) setStage(stage Stage) {
+func (w *window) setStage(stage mado.Stage) {
 	if stage == w.stage {
 		return
 	}
 	w.stage = stage
-	w.w.Event(StageEvent{Stage: stage})
+	w.w.Event(mado.StageEvent{Stage: stage})
 }
 
 //export gio_onKeys
@@ -589,9 +589,9 @@ func gio_onFocus(view C.CFTypeRef, focus C.int) {
 	w.w.Event(key.FocusEvent{Focus: focus == 1})
 	if w.stage >= StageInactive {
 		if focus == 0 {
-			w.setStage(StageInactive)
+			w.setStage(mado.StageInactive)
 		} else {
-			w.setStage(StageRunning)
+			w.setStage(mado.StageRunning)
 		}
 	}
 	w.SetCursor(w.cursor)
@@ -786,7 +786,7 @@ func (w *window) draw() {
 		return
 	}
 	cfg := configFor(w.scale)
-	w.setStage(StageRunning)
+	w.setStage(mado.StageRunning)
 	w.w.Event(mado.FrameEvent{
 		Now:    time.Now(),
 		Size:   w.config.Size,
@@ -817,13 +817,13 @@ func gio_onClose(view C.CFTypeRef) {
 //export gio_onHide
 func gio_onHide(view C.CFTypeRef) {
 	w := mustView(view)
-	w.setStage(StagePaused)
+	w.setStage(mado.StagePaused)
 }
 
 //export gio_onShow
 func gio_onShow(view C.CFTypeRef) {
 	w := mustView(view)
-	w.setStage(StageRunning)
+	w.setStage(mado.StageRunning)
 }
 
 //export gio_onFullscreen
@@ -843,14 +843,14 @@ func gio_onWindowed(view C.CFTypeRef) {
 //export gio_onAppHide
 func gio_onAppHide() {
 	for _, w := range viewMap {
-		w.setStage(StagePaused)
+		w.setStage(mado.StagePaused)
 	}
 }
 
 //export gio_onAppShow
 func gio_onAppShow() {
 	for _, w := range viewMap {
-		w.setStage(StageRunning)
+		w.setStage(mado.StageRunning)
 	}
 }
 

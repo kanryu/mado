@@ -66,7 +66,7 @@ type Window struct {
 	frameAck chan struct{}
 	Destroy  chan struct{}
 
-	stage        Stage
+	stage        mado.Stage
 	animating    bool
 	hasNextFrame bool
 	nextFrame    time.Time
@@ -406,7 +406,7 @@ func (w *Window) DriverDefer(f func(d mado.Driver)) {
 
 func (w *Window) UpdateAnimation(d mado.Driver) {
 	animate := false
-	if w.stage >= StageInactive && w.hasNextFrame {
+	if w.stage >= mado.StageInactive && w.hasNextFrame {
 		if dt := time.Until(w.nextFrame); dt <= 0 {
 			animate = true
 		} else {
@@ -808,8 +808,8 @@ func (w *Window) ProcessEvent(d mado.Driver, e event.Event) bool {
 	default:
 	}
 	switch e2 := e.(type) {
-	case StageEvent:
-		if e2.Stage < StageInactive {
+	case mado.StageEvent:
+		if e2.Stage < mado.StageInactive {
 			if w.gpu != nil {
 				w.ctx.Lock()
 				w.gpu.Release()
@@ -825,7 +825,7 @@ func (w *Window) ProcessEvent(d mado.Driver, e event.Event) bool {
 		if e2.Size == (image.Point{}) {
 			panic(errors.New("internal error: zero-sized Draw"))
 		}
-		if w.stage < StageInactive {
+		if w.stage < mado.StageInactive {
 			// No drawing if not visible.
 			break
 		}

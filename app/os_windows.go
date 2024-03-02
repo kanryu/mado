@@ -28,6 +28,7 @@ import (
 	"github.com/kanryu/mado/io/pointer"
 	"github.com/kanryu/mado/io/system"
 	"github.com/kanryu/mado/io/transfer"
+	iowindow "github.com/kanryu/mado/io/window"
 )
 
 type ViewEvent struct {
@@ -40,7 +41,7 @@ type window struct {
 	hwnd        syscall.Handle
 	hdc         syscall.Handle
 	w           mado.Callbacks
-	stage       Stage
+	stage       mado.Stage
 	pointerBtns pointer.Buttons
 
 	// cursorIn tracks whether the cursor was inside the window according
@@ -96,12 +97,15 @@ func EnablePollEvents() {
 	withPollEvents = true
 }
 
+// PollEvents In the Windows implementation,
+// each Window has own event loop goroutine,
+// so there is no need to process events here.
 func PollEvents() {
-	msg := windows.Msg{}
-	for windows.PeekMessage(&msg, 0, 0, 0, windows.PM_REMOVE) {
-		windows.TranslateMessage(&msg)
-		windows.DispatchMessage(&msg)
-	}
+	// msg := windows.Msg{}
+	// for windows.PeekMessage(&msg, 0, 0, 0, windows.PM_REMOVE) {
+	// 	windows.TranslateMessage(&msg)
+	// 	windows.DispatchMessage(&msg)
+	// }
 }
 
 func newWindow(window mado.Callbacks, options []mado.Option) error {
@@ -289,11 +293,11 @@ func windowProc(hwnd syscall.Handle, msg uint32, wParam, lParam uintptr) uintptr
 		w.focused = false
 		w.w.Event(key.FocusEvent{Focus: false})
 	case windows.WM_NCACTIVATE:
-		if w.stage >= StageInactive {
+		if w.stage >= mado.StageInactive {
 			if wParam == windows.TRUE {
-				w.setStage(StageRunning)
+				w.setStage(mado.StageRunning)
 			} else {
-				w.setStage(StageInactive)
+				w.setStage(mado.StageInactive)
 			}
 		}
 	case windows.WM_NCHITTEST:
@@ -305,6 +309,9 @@ func windowProc(hwnd syscall.Handle, msg uint32, wParam, lParam uintptr) uintptr
 		np := windows.Point{X: int32(x), Y: int32(y)}
 		windows.ScreenToClient(w.hwnd, &np)
 		return w.hitTest(int(np.X), int(np.Y))
+	case windows.WM_MOVE:
+		x, y := coordsFromlParam(lParam)
+		w.w.Event(iowindow.MoveEvent{Pos: image.Point{X: x, Y: y}})
 	case windows.WM_MOUSEMOVE:
 		x, y := coordsFromlParam(lParam)
 		p := f32.Point{X: float32(x), Y: float32(y)}
@@ -355,19 +362,23 @@ func windowProc(hwnd syscall.Handle, msg uint32, wParam, lParam uintptr) uintptr
 	case windows.WM_PAINT:
 		w.draw(true)
 	case windows.WM_SIZE:
-		w.update()
+		x, y := coordsFromlParam(lParam)
+		w.w.Event(iowindow.SizeEvent{Size: image.Point{X: x, Y: y}})
 		switch wParam {
 		case windows.SIZE_MINIMIZED:
 			w.config.Mode = mado.Minimized
-			w.setStage(StagePaused)
+			w.update()
+			w.setStage(mado.StagePaused)
 		case windows.SIZE_MAXIMIZED:
 			w.config.Mode = mado.Maximized
-			w.setStage(StageRunning)
+			w.update()
+			w.setStage(mado.StageRunning)
 		case windows.SIZE_RESTORED:
 			if w.config.Mode != mado.Fullscreen {
 				w.config.Mode = mado.Windowed
+				w.update()
 			}
-			w.setStage(StageRunning)
+			w.setStage(mado.StageRunning)
 		}
 	case windows.WM_GETMINMAXINFO:
 		mm := (*windows.MinMaxInfo)(unsafe.Pointer(uintptr(lParam)))
@@ -628,11 +639,11 @@ func (w *window) Wakeup() {
 	}
 }
 
-func (w *window) setStage(s Stage) {
-	if s != w.stage {
-		w.stage = s
-		w.w.Event(StageEvent{Stage: s})
-	}
+func (w *window) setStage(s mado.Stage) {
+	//	if s != w.stage {
+	w.stage = s
+	w.w.Event(mado.StageEvent{Stage: s})
+	// }
 }
 
 func (w *window) draw(sync bool) {

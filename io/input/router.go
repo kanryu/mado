@@ -18,6 +18,7 @@ import (
 	"github.com/kanryu/mado/io/semantic"
 	"github.com/kanryu/mado/io/system"
 	"github.com/kanryu/mado/io/transfer"
+	"github.com/kanryu/mado/io/window"
 	"github.com/kanryu/mado/op"
 )
 
@@ -429,6 +430,9 @@ func (f *filter) Reset() {
 func (q *Router) processEvent(e event.Event, system bool) {
 	state := q.lastState()
 	switch e := e.(type) {
+	case window.MoveEvent, window.SizeEvent:
+		evts := []taggedEvent{taggedEvent{tag: e, event: e}}
+		q.changeState(e, state, evts)
 	case pointer.Event:
 		pstate, evts := q.pointer.queue.Push(q.handlers, state.pointerState, e)
 		state.pointerState = pstate

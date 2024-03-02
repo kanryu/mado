@@ -180,6 +180,16 @@ type Window struct {
 	fIconifyHolder         func(w *Window, iconified bool)
 
 	// Input.
+	fMouseButtonHolder func(w *Window, button MouseButton, action Action, mod ModifierKey)
+	fCursorPosHolder   func(w *Window, xpos float64, ypos float64)
+	fCursorEnterHolder func(w *Window, entered bool)
+	fScrollHolder      func(w *Window, xoff float64, yoff float64)
+	fKeyHolder         func(w *Window, key Key, scancode int, action Action, mods ModifierKey)
+	fCharHolder        func(w *Window, char rune)
+	fCharModsHolder    func(w *Window, char rune, mods ModifierKey)
+	fDropHolder        func(w *Window, names []string)
+
+	// IME Input.
 	fPreeditHolder func(
 		w *Window,
 		preeditCount int,
@@ -197,14 +207,6 @@ type Window struct {
 		pageStart int,
 		pageSize int,
 	)
-	fMouseButtonHolder func(w *Window, button MouseButton, action Action, mod ModifierKey)
-	fCursorPosHolder   func(w *Window, xpos float64, ypos float64)
-	fCursorEnterHolder func(w *Window, entered bool)
-	fScrollHolder      func(w *Window, xoff float64, yoff float64)
-	fKeyHolder         func(w *Window, key Key, scancode int, action Action, mods ModifierKey)
-	fCharHolder        func(w *Window, char rune)
-	fCharModsHolder    func(w *Window, char rune, mods ModifierKey)
-	fDropHolder        func(w *Window, names []string)
 }
 
 // CreateWindow creates a window and its associated context. Most of the options
@@ -745,6 +747,61 @@ func (w *Window) SetIconifyCallback(cbfun IconifyCallback) (previous IconifyCall
 	return previous
 }
 
+// MouseButtonCallback is the mouse button callback.
+type MouseButtonCallback func(w *Window, button MouseButton, action Action, mods ModifierKey)
+
+// SetMouseButtonCallback sets the mouse button callback which is called when a
+// mouse button is pressed or released.
+//
+// When a window loses focus, it will generate synthetic mouse button release
+// events for all pressed mouse buttons. You can tell these events from
+// user-generated events by the fact that the synthetic ones are generated after
+// the window has lost focus, i.e. Focused will be false and the focus
+// callback will have already been called.
+func (w *Window) SetMouseButtonCallback(cbfun MouseButtonCallback) (previous MouseButtonCallback) {
+	previous = w.fMouseButtonHolder
+	w.fMouseButtonHolder = cbfun
+	panicError()
+	return previous
+}
+
+// CursorPosCallback the cursor position callback.
+type CursorPosCallback func(w *Window, xpos float64, ypos float64)
+
+// SetCursorPosCallback sets the cursor position callback which is called
+// when the cursor is moved. The callback is provided with the position relative
+// to the upper-left corner of the client area of the window.
+func (w *Window) SetCursorPosCallback(cbfun CursorPosCallback) (previous CursorPosCallback) {
+	previous = w.fCursorPosHolder
+	w.fCursorPosHolder = cbfun
+	panicError()
+	return previous
+}
+
+// CursorEnterCallback is the cursor boundary crossing callback.
+type CursorEnterCallback func(w *Window, entered bool)
+
+// SetCursorEnterCallback the cursor boundary crossing callback which is called
+// when the cursor enters or leaves the client area of the window.
+func (w *Window) SetCursorEnterCallback(cbfun CursorEnterCallback) (previous CursorEnterCallback) {
+	previous = w.fCursorEnterHolder
+	w.fCursorEnterHolder = cbfun
+	panicError()
+	return previous
+}
+
+// ScrollCallback is the scroll callback.
+type ScrollCallback func(w *Window, xoff float64, yoff float64)
+
+// SetScrollCallback sets the scroll callback which is called when a scrolling
+// device is used, such as a mouse wheel or scrolling area of a touchpad.
+func (w *Window) SetScrollCallback(cbfun ScrollCallback) (previous ScrollCallback) {
+	previous = w.fScrollHolder
+	w.fScrollHolder = cbfun
+	panicError()
+	return previous
+}
+
 // KeyCallback is the key callback.
 type KeyCallback func(w *Window, key Key, scancode int, action Action, mods ModifierKey)
 
@@ -813,61 +870,6 @@ func (w *Window) SetCharModsCallback(cbfun CharModsCallback) (previous CharModsC
 	return previous
 }
 
-// MouseButtonCallback is the mouse button callback.
-type MouseButtonCallback func(w *Window, button MouseButton, action Action, mods ModifierKey)
-
-// SetMouseButtonCallback sets the mouse button callback which is called when a
-// mouse button is pressed or released.
-//
-// When a window loses focus, it will generate synthetic mouse button release
-// events for all pressed mouse buttons. You can tell these events from
-// user-generated events by the fact that the synthetic ones are generated after
-// the window has lost focus, i.e. Focused will be false and the focus
-// callback will have already been called.
-func (w *Window) SetMouseButtonCallback(cbfun MouseButtonCallback) (previous MouseButtonCallback) {
-	previous = w.fMouseButtonHolder
-	w.fMouseButtonHolder = cbfun
-	panicError()
-	return previous
-}
-
-// CursorPosCallback the cursor position callback.
-type CursorPosCallback func(w *Window, xpos float64, ypos float64)
-
-// SetCursorPosCallback sets the cursor position callback which is called
-// when the cursor is moved. The callback is provided with the position relative
-// to the upper-left corner of the client area of the window.
-func (w *Window) SetCursorPosCallback(cbfun CursorPosCallback) (previous CursorPosCallback) {
-	previous = w.fCursorPosHolder
-	w.fCursorPosHolder = cbfun
-	panicError()
-	return previous
-}
-
-// CursorEnterCallback is the cursor boundary crossing callback.
-type CursorEnterCallback func(w *Window, entered bool)
-
-// SetCursorEnterCallback the cursor boundary crossing callback which is called
-// when the cursor enters or leaves the client area of the window.
-func (w *Window) SetCursorEnterCallback(cbfun CursorEnterCallback) (previous CursorEnterCallback) {
-	previous = w.fCursorEnterHolder
-	w.fCursorEnterHolder = cbfun
-	panicError()
-	return previous
-}
-
-// ScrollCallback is the scroll callback.
-type ScrollCallback func(w *Window, xoff float64, yoff float64)
-
-// SetScrollCallback sets the scroll callback which is called when a scrolling
-// device is used, such as a mouse wheel or scrolling area of a touchpad.
-func (w *Window) SetScrollCallback(cbfun ScrollCallback) (previous ScrollCallback) {
-	previous = w.fScrollHolder
-	w.fScrollHolder = cbfun
-	panicError()
-	return previous
-}
-
 // DropCallback is the drop callback.
 type DropCallback func(w *Window, names []string)
 
@@ -876,6 +878,67 @@ type DropCallback func(w *Window, names []string)
 func (w *Window) SetDropCallback(cbfun DropCallback) (previous DropCallback) {
 	previous = w.fDropHolder
 	w.fDropHolder = cbfun
+	panicError()
+	return previous
+}
+
+// PreeditCallback is preedit text input callback.
+type PreeditCallback func(
+	w *Window,
+	preeditCount int,
+	preeditString string,
+	blockCount int,
+	blockSizes string,
+	focusedBlock int,
+	caret int,
+)
+
+// SetPreeditCallback sets the preedit text input callback to the window.
+//
+// IME Users enter text with the IME turned on. At this time,
+// no char input event occurs in the Window, and the window is notified
+// of the character string of the undefined input token(called preedit).
+// The window must display this token appropriately.
+func (w *Window) SetPreeditCallback(cbfun PreeditCallback) (previous PreeditCallback) {
+	previous = w.fPreeditHolder
+	w.fPreeditHolder = cbfun
+	panicError()
+	return previous
+}
+
+// ImeStatusCallback is change signal of the Ime status to the window callback.
+type ImeStatusCallback func(w *Window)
+
+// SetImeStatusCallback sets the callback of change signal of the Ime status to the window.
+//
+// Users of languages that require text input using an IME should turn on the IME before entering text.
+// This callback receives IME ON/OFF events.
+func (w *Window) SetImeStatusCallback(cbfun ImeStatusCallback) (previous ImeStatusCallback) {
+	previous = w.fImeStatusHolder
+	w.fImeStatusHolder = cbfun
+	panicError()
+	return previous
+}
+
+// PreeditCandidateCallback is change signal of the Ime status to the window callback.
+type PreeditCandidateCallback func(
+	w *Window,
+	candidatesCount int,
+	selectedIndex int,
+	pageStart int,
+	pageSize int,
+)
+
+// SetPreeditCandidateCallback sets a callback that receives
+// the information necessary to display a window of the list of conversion candidate strings for preedit.
+//
+// When an IME user enters preedit, they typically select from a list of conversion candidate tokens.
+// Many OS have a dedicated pull-down display, and you can switch between conversion candidates
+// by using the space, tab, up, down cursor keys.
+// There may be too many selection candidates to display in the pull-down list.
+func (w *Window) SetPreeditCandidateCallback(cbfun PreeditCandidateCallback) (previous PreeditCandidateCallback) {
+	previous = w.fPreeditCandidateHolder
+	w.fPreeditCandidateHolder = cbfun
 	panicError()
 	return previous
 }
