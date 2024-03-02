@@ -13,6 +13,7 @@ import (
 	"github.com/kanryu/mado/io/clipboard"
 	"github.com/kanryu/mado/io/key"
 	"github.com/kanryu/mado/io/system"
+	"github.com/kanryu/mado/unit"
 )
 
 // Internal window list stuff
@@ -238,8 +239,12 @@ type Window struct {
 //
 // This function may only be called from the main thread.
 func CreateWindow(width, height int, title string, monitor *Monitor, share *Window) (*Window, error) {
+	options := []mado.Option{
+		app.Size(unit.Dp(width), unit.Dp(height)),
+		app.Title(title),
+	}
 	c := &Callbacks{}
-	w := app.NewWindow(c)
+	w := app.NewWindow(c, options...)
 	wnd := &Window{
 		App:       theApp,
 		data:      w,

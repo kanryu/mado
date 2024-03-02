@@ -2,10 +2,8 @@ package glfw
 
 import (
 	"fmt"
-	"runtime"
+	"time"
 	"unsafe"
-
-	"github.com/kanryu/mado/app"
 )
 
 // MakeContextCurrent makes the context of the window current.
@@ -13,10 +11,9 @@ import (
 // But since we're using receievers, DetachCurrentContext should
 // be used instead.
 func (w *Window) MakeContextCurrent() {
-	go func() {
-		runtime.LockOSThread()
-		app.Main()
-	}()
+	// go func() {
+	// 	runtime.LockOSThread()
+	// }()
 	panicError()
 }
 
@@ -36,7 +33,10 @@ func GetCurrentContext() *Window {
 // swap interval is greater than zero, the GPU driver waits the specified number
 // of screen updates before swapping the buffers.
 func (w *Window) SwapBuffers() {
-	fmt.Println("not implemented")
+	t := time.NewTicker(1000 / 60 * time.Millisecond)
+	select {
+	case <-t.C:
+	}
 	panicError()
 }
 

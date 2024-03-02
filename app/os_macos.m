@@ -8,6 +8,9 @@
 
 __attribute__ ((visibility ("hidden"))) CALayer *gio_layerFactory(void);
 
+bool withPollEvents = false;
+
+
 @interface GioAppDelegate : NSObject<NSApplicationDelegate>
 @end
 
@@ -382,6 +385,9 @@ CFTypeRef gio_createView(void) {
 - (void)applicationDidFinishLaunching:(NSNotification *)aNotification {
 	[NSApp setActivationPolicy:NSApplicationActivationPolicyRegular];
 	[NSApp activateIgnoringOtherApps:YES];
+	if (withPollEvents) {
+		[NSApp stop:nil];
+	}
 	gio_onFinishLaunching();
 }
 - (void)applicationDidHide:(NSNotification *)aNotification {
@@ -418,4 +424,28 @@ void gio_main() {
 
 		[NSApp run];
 	}
+}
+
+void gio_enablePollEvents(void)
+{
+	withPollEvents = true;
+}
+
+void gio_PollEvents(void)
+{
+    @autoreleasepool {
+
+    for (;;)
+    {
+        NSEvent* event = [NSApp nextEventMatchingMask:NSEventMaskAny
+                                            untilDate:[NSDate distantPast]
+                                               inMode:NSDefaultRunLoopMode
+                                              dequeue:YES];
+        if (event == nil)
+            break;
+
+        [NSApp sendEvent:event];
+    }
+
+    } // autoreleasepool
 }

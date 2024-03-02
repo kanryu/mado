@@ -5,20 +5,14 @@ import (
 	"fmt"
 	"os"
 	"os/signal"
-	"reflect"
 	"sync"
 
 	"github.com/kanryu/mado"
 	"github.com/kanryu/mado/app"
-	"github.com/kanryu/mado/font/gofont"
 	"github.com/kanryu/mado/io/event"
 	"github.com/kanryu/mado/io/key"
 	"github.com/kanryu/mado/io/pointer"
-	"github.com/kanryu/mado/io/system"
-	"github.com/kanryu/mado/layout"
 	"github.com/kanryu/mado/op"
-	"github.com/kanryu/mado/text"
-	"github.com/kanryu/mado/widget/material"
 )
 
 // Version constants.
@@ -27,11 +21,6 @@ const (
 	VersionMinor    = 3 // This is incremented when features are added to the API but it remains backward-compatible.
 	VersionRevision = 9 // This is incremented when a bug fix release is made that does not contain any API changes.
 )
-
-type WindowEvent struct {
-	w *Window
-	e event.Event
-}
 
 var theApp *Application
 
@@ -44,11 +33,7 @@ type Application struct {
 	Shutdown func()
 	// active keeps track the open windows, such that application
 	// can shut down, when all of them are closed.
-	active sync.WaitGroup
-
-	chans      []chan WindowEvent
-	eventCases []reflect.SelectCase
-	windowList []*Window
+	Active sync.WaitGroup
 }
 
 func NewApplication(ctx context.Context, stop context.CancelFunc) *Application {
@@ -60,100 +45,63 @@ func NewApplication(ctx context.Context, stop context.CancelFunc) *Application {
 	}
 }
 
+// appendWindow add a window to your application. Count Active and watch until window is destroyed
 func (a *Application) appendWindow(w *Window) {
 	windows.put(w)
-
-	ch := make(chan WindowEvent)
-	a.chans = append(a.chans, ch)
-	a.eventCases = append(a.eventCases, reflect.SelectCase{Dir: reflect.SelectRecv, Chan: reflect.ValueOf(ch)})
-	a.windowList = append(a.windowList, w)
-	a.active.Add(1)
+	a.Active.Add(1)
 
 	go func() {
-		tag := new(int)
-		var ops op.Ops
-		for {
-			e := w.data.NextEvent()
-			ch <- WindowEvent{w: w, e: e}
-			switch e2 := e.(type) {
-			case mado.DestroyEvent:
-				w.shouldClose = true
-				close(ch)
-				return
-			case mado.FrameEvent:
-				gtx := app.NewContext(&ops, e2)
-				for {
-					ev, ok := gtx.Source.Event(pointer.Filter{
-						Target: tag,
-						Kinds:  pointer.Release,
-					})
-					if !ok {
-						break
-					}
-					switch ev := ev.(type) {
-					case pointer.Event:
-						if ev.Kind == pointer.Release {
-							gtx.Execute(key.FocusCmd{Tag: tag})
-							fmt.Println("triggered focus command")
-						}
-					}
-					fmt.Printf("%#+v\n", ev)
-				}
-				for {
-					ev, ok := gtx.Source.Event(key.Filter{
-						Focus: tag,
-					})
-					if !ok {
-						break
-					}
-					fmt.Printf("%#+v\n", ev)
-				}
-				event.Op(gtx.Ops, tag)
-				e2.Frame(gtx.Ops)
-			}
-		}
+		defer a.Active.Done()
+		a.run(w)
 	}()
+}
 
-	// go func() {
-	// 	defer a.active.Done()
-	// 	a.Run(w)
-	// }()
+func (a *Application) run(w *Window) {
+	tag := new(int)
+	var ops op.Ops
+	for {
+		e := w.data.NextEvent()
+		switch e2 := e.(type) {
+		case mado.DestroyEvent:
+			w.shouldClose = true
+			return
+		case mado.FrameEvent:
+			gtx := app.NewContext(&ops, e2)
+			for {
+				ev, ok := gtx.Source.Event(pointer.Filter{
+					Target: tag,
+					Kinds:  pointer.Release,
+				})
+				if !ok {
+					break
+				}
+				switch ev := ev.(type) {
+				case pointer.Event:
+					if ev.Kind == pointer.Release {
+						gtx.Execute(key.FocusCmd{Tag: tag})
+						fmt.Println("triggered focus command")
+					}
+				}
+				fmt.Printf("%#+v\n", ev)
+			}
+			for {
+				ev, ok := gtx.Source.Event(key.Filter{
+					Focus: tag,
+				})
+				if !ok {
+					break
+				}
+				fmt.Printf("%#+v\n", ev)
+			}
+			event.Op(gtx.Ops, tag)
+			e2.Frame(gtx.Ops)
+		}
+	}
 }
 
 // Wait waits for all windows to close.
 func (a *Application) Wait() {
-	a.active.Wait()
-}
-
-// View describes .
-type View interface {
-	// Run handles the window event loop.
-	Run(w *Window) error
-}
-
-// WidgetView allows to use layout.Widget as a view.
-type WidgetView func(gtx layout.Context, th *material.Theme) layout.Dimensions
-
-// Run displays the widget with default handling.
-func (a *Application) Run(w *Window) error {
-	var ops op.Ops
-
-	th := material.NewTheme()
-	th.Shaper = text.NewShaper(text.WithCollection(gofont.Collection()))
-
-	go func() {
-		<-w.App.Context.Done()
-		w.data.Perform(system.ActionClose)
-	}()
-	for {
-		switch e := w.data.NextEvent().(type) {
-		case mado.DestroyEvent:
-			return e.Err
-		case mado.FrameEvent:
-			gtx := app.NewContext(&ops, e)
-			e.Frame(gtx.Ops)
-		}
-	}
+	a.Active.Wait()
 }
 
 // Init initializes the GLFW library. Before most GLFW functions can be used,
@@ -176,6 +124,9 @@ func (a *Application) Run(w *Window) error {
 //
 // This function may only be called from the main thread.
 func Init() error {
+	app.EnablePollEvents()
+	app.Main()
+
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt)
 	theApp = NewApplication(ctx, stop)
 	return acceptError(APIUnavailable)
@@ -194,7 +145,6 @@ func Init() error {
 func Terminate() {
 	theApp.Stop()
 	flushErrors()
-	fmt.Println("not implemented")
 }
 
 // PollEvents processes only those events that have already been received and
@@ -207,18 +157,7 @@ func Terminate() {
 //
 // This function may only be called from the main thread.
 func PollEvents() {
-	remaining := len(theApp.eventCases)
-	if remaining <= 0 {
-		return
-	}
-	chosen, _, ok := reflect.Select(theApp.eventCases)
-	if !ok {
-		// remove evantCase
-		theApp.chans = append(theApp.chans[:chosen], theApp.chans[chosen+1:]...)
-		theApp.eventCases = append(theApp.eventCases[:chosen], theApp.eventCases[chosen+1:]...)
-		theApp.windowList = append(theApp.windowList[:chosen], theApp.windowList[chosen+1:]...)
-		remaining -= 1
-	}
+	app.PollEvents()
 	panicError()
 }
 

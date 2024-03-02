@@ -38,6 +38,8 @@ import (
 #define MOUSE_SCROLL 4
 
 __attribute__ ((visibility ("hidden"))) void gio_main(void);
+__attribute__ ((visibility ("hidden"))) void gio_enablePollEvents(void);
+__attribute__ ((visibility ("hidden"))) void gio_PollEvents(void);
 __attribute__ ((visibility ("hidden"))) CFTypeRef gio_createView(void);
 __attribute__ ((visibility ("hidden"))) CFTypeRef gio_createWindow(CFTypeRef viewRef, CGFloat width, CGFloat height, CGFloat minWidth, CGFloat minHeight, CGFloat maxWidth, CGFloat maxHeight);
 
@@ -917,6 +919,14 @@ func newOSWindow() (*window, error) {
 
 func osMain() {
 	C.gio_main()
+}
+
+func EnablePollEvents() {
+	C.gio_enablePollEvents()
+}
+
+func PollEvents() {
+	C.gio_PollEvents()
 }
 
 func convertKey(k rune) (key.Name, bool) {
