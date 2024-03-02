@@ -13,6 +13,7 @@ import (
 	"github.com/kanryu/mado/io/pointer"
 	"github.com/kanryu/mado/io/system"
 	"github.com/kanryu/mado/io/window"
+	"github.com/kanryu/mado/unit"
 )
 
 var _ mado.Callbacks = (*Callbacks)(nil)
@@ -24,6 +25,9 @@ type Callbacks struct {
 	Busy            bool
 	PrevWindowMode  mado.WindowMode
 	PrevWindowStage mado.Stage
+	PrevMetric      unit.Metric
+	PrevCursorPos   f32.Point
+	PrevModifiers   key.Modifiers
 	WaitEvents      []event.Event
 }
 
@@ -88,14 +92,41 @@ func (c *Callbacks) Event(e event.Event) bool {
 				c.Gw.fFocusHolder(c.Gw, false)
 				c.PrevWindowStage = mado.StageInactive
 			}
+		case mado.FrameEvent:
+			if c.PrevMetric != e2.Metric {
+				c.PrevMetric = e2.Metric
+				c.Gw.fContentScaleHolder(c.Gw, e2.Metric.PxPerDp, e2.Metric.PxPerDp)
+			}
+			c.Gw.fRefreshHolder(c.Gw)
 		case window.MoveEvent:
 			c.Gw.fPosHolder(c.Gw, e2.Pos.X, e2.Pos.Y)
 		case window.SizeEvent:
 			c.Gw.fSizeHolder(c.Gw, e2.Size.X, e2.Size.Y)
+		case window.CloseEvent:
+			c.Gw.fCloseHolder(c.Gw)
 		case pointer.Event:
-			c.Gw.fMouseButtonHolder(c.Gw, MouseButton(e2.Buttons), Action(e2.Kind), ModifierKey(e2.Modifiers))
+			if e2.Kind == pointer.Scroll {
+				c.Gw.fScrollHolder(c.Gw, float64(e2.Scroll.X), float64(e2.Scroll.Y))
+			} else if c.PrevCursorPos != e2.Position {
+				c.Gw.fCursorPosHolder(c.Gw, float64(e2.Position.X), float64(e2.Position.Y))
+				c.PrevCursorPos = e2.Position
+			} else {
+				c.Gw.fMouseButtonHolder(c.Gw, MouseButton(e2.Buttons), Action(e2.Kind), ModifierKey(e2.Modifiers))
+			}
+		case pointer.CursorEnterEvent:
+			c.Gw.fCursorEnterHolder(c.Gw, e2.Entered)
 		case key.Event:
+			c.PrevModifiers = e2.Modifiers
 			c.Gw.fKeyHolder(c.Gw, Key(e2.KeyCode), 0, Action(e2.State), ModifierKey(e2.Modifiers))
+		case key.EditEvent:
+			for _, r := range e2.Text {
+				c.Gw.fCharModsHolder(c.Gw, r, ModifierKey(c.PrevModifiers))
+				if !e2.Preedit {
+					// [1] chars with IME off
+					// [2] Token whose input is confirmed (not preedit)
+					c.Gw.fCharHolder(c.Gw, r)
+				}
+			}
 		}
 	}
 	c.Busy = false
@@ -164,9 +195,9 @@ func (c *Callbacks) SetComposingRegion(r key.Range) {
 	c.W.ImeState.Compose = r
 }
 
-func (c *Callbacks) EditorInsert(text string) {
+func (c *Callbacks) EditorInsert(text string, preedit bool) {
 	sel := c.W.ImeState.Selection.Range
-	c.EditorReplace(sel, text)
+	c.EditorReplace(sel, text, preedit)
 	start := sel.Start
 	if sel.End < start {
 		start = sel.End
@@ -176,9 +207,9 @@ func (c *Callbacks) EditorInsert(text string) {
 	c.SetEditorSelection(sel)
 }
 
-func (c *Callbacks) EditorReplace(r key.Range, text string) {
+func (c *Callbacks) EditorReplace(r key.Range, text string, preedit bool) {
 	c.W.ImeState.Replace(r, text)
-	c.Event(key.EditEvent{Range: r, Text: text})
+	c.Event(key.EditEvent{Range: r, Text: text, Preedit: preedit})
 	c.Event(key.SnippetEvent(c.W.ImeState.Snippet.Range))
 }
 

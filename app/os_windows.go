@@ -46,8 +46,9 @@ type window struct {
 
 	// cursorIn tracks whether the cursor was inside the window according
 	// to the most recent WM_SETCURSOR.
-	cursorIn bool
-	cursor   syscall.Handle
+	cursorIn      bool
+	cursor        syscall.Handle
+	cursorTracked bool
 
 	// placement saves the previous window position when in full screen mode.
 	placement *windows.WindowPlacement
@@ -240,7 +241,7 @@ func windowProc(hwnd syscall.Handle, msg uint32, wParam, lParam uintptr) uintptr
 		fallthrough
 	case windows.WM_CHAR:
 		if r := rune(wParam); unicode.IsPrint(r) {
-			w.w.EditorInsert(string(r))
+			w.w.EditorInsert(string(r), false)
 		}
 		// The message is processed.
 		return windows.TRUE
@@ -312,7 +313,19 @@ func windowProc(hwnd syscall.Handle, msg uint32, wParam, lParam uintptr) uintptr
 	case windows.WM_MOVE:
 		x, y := coordsFromlParam(lParam)
 		w.w.Event(iowindow.MoveEvent{Pos: image.Point{X: x, Y: y}})
+	case windows.WM_CLOSE:
+		w.w.Event(iowindow.CloseEvent{})
 	case windows.WM_MOUSEMOVE:
+		if !w.cursorTracked {
+			tme := windows.TrackMouseEventStruct{
+				CbFlags:   windows.THE_LEAVE,
+				HwndTrack: w.hwnd,
+			}
+			windows.TrackMouseEvent(tme)
+
+			w.cursorTracked = true
+			w.w.Event(pointer.CursorEnterEvent{Entered: true})
+		}
 		x, y := coordsFromlParam(lParam)
 		p := f32.Point{X: float32(x), Y: float32(y)}
 		w.w.Event(pointer.Event{
@@ -323,6 +336,9 @@ func windowProc(hwnd syscall.Handle, msg uint32, wParam, lParam uintptr) uintptr
 			Time:      windows.GetMessageTime(),
 			Modifiers: getModifiers(),
 		})
+	case windows.WM_MOUSELEAVE:
+		w.cursorTracked = false
+		w.w.Event(pointer.CursorEnterEvent{Entered: false})
 	case windows.WM_MOUSEWHEEL:
 		w.scrollEvent(wParam, lParam, false, getModifiers())
 	case windows.WM_MOUSEHWHEEL:
@@ -436,14 +452,16 @@ func windowProc(hwnd syscall.Handle, msg uint32, wParam, lParam uintptr) uintptr
 			rng.Start, rng.End = rng.End, rng.Start
 		}
 		var replacement string
+		preedit := false
 		switch {
 		case lParam&windows.GCS_RESULTSTR != 0:
 			replacement = windows.ImmGetCompositionString(imc, windows.GCS_RESULTSTR)
 		case lParam&windows.GCS_COMPSTR != 0:
 			replacement = windows.ImmGetCompositionString(imc, windows.GCS_COMPSTR)
+			preedit = true
 		}
 		end := rng.Start + utf8.RuneCountInString(replacement)
-		w.w.EditorReplace(rng, replacement)
+		w.w.EditorReplace(rng, replacement, preedit)
 		state = w.w.EditorState()
 		comp := key.Range{
 			Start: rng.Start,

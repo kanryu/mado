@@ -42,6 +42,10 @@ type Event struct {
 	Modifiers key.Modifiers
 }
 
+type CursorEnterEvent struct {
+	Entered bool
+}
+
 // PassOp sets the pass-through mode. InputOps added while the pass-through
 // mode is set don't block events to siblings.
 type PassOp struct {
@@ -381,7 +385,8 @@ func (c Cursor) String() string {
 	}
 }
 
-func (Event) ImplementsEvent() {}
+func (Event) ImplementsEvent()            {}
+func (CursorEnterEvent) ImplementsEvent() {}
 
 func (GrabCmd) ImplementsCommand() {}
 

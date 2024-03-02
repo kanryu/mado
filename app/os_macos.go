@@ -232,6 +232,13 @@ static void invalidateCharacterCoordinates(CFTypeRef viewRef) {
 		}
     }
 }
+
+static bool isPreeditText(void) {
+	NSEvent* event = [NSApp currentEvent];
+	const int plain = [event modifierFlags] & NSEventModifierFlagCommand;
+	return !!plain
+}
+
 */
 import "C"
 
@@ -523,8 +530,9 @@ func gio_onKeys(view, cstr C.CFTypeRef, keyCode C.UInt16, ti C.double, mods C.NS
 //export gio_onText
 func gio_onText(view, cstr C.CFTypeRef) {
 	str := nsstringToString(cstr)
+	preedit := isPreeditText()
 	w := mustView(view)
-	w.w.EditorInsert(str)
+	w.w.EditorInsert(str, preedit)
 }
 
 //export gio_onMouse

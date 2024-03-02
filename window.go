@@ -136,8 +136,8 @@ type Callbacks interface {
 	SemanticAt(pos f32.Point) (input.SemanticID, bool)
 	EditorState() EditorState
 	SetComposingRegion(r key.Range)
-	EditorInsert(text string)
-	EditorReplace(r key.Range, text string)
+	EditorInsert(text string, preedit bool)
+	EditorReplace(r key.Range, text string, preedit bool)
 	SetEditorSelection(r key.Range)
 	SetEditorSnippet(r key.Range)
 	ClickFocus()

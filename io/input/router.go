@@ -430,7 +430,7 @@ func (f *filter) Reset() {
 func (q *Router) processEvent(e event.Event, system bool) {
 	state := q.lastState()
 	switch e := e.(type) {
-	case window.MoveEvent, window.SizeEvent:
+	case window.MoveEvent, window.SizeEvent, window.CloseEvent, pointer.CursorEnterEvent:
 		evts := []taggedEvent{taggedEvent{tag: e, event: e}}
 		q.changeState(e, state, evts)
 	case pointer.Event:

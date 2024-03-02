@@ -108,6 +108,13 @@ type MonitorInfo struct {
 	Flags    uint32
 }
 
+type TrackMouseEventStruct struct {
+	cbSize      uint32
+	CbFlags     uint32
+	HwndTrack   syscall.Handle
+	DwHoverTime uint32
+}
+
 const (
 	TRUE = 1
 
@@ -263,6 +270,7 @@ const (
 	WM_MBUTTONDOWN          = 0x0207
 	WM_MBUTTONUP            = 0x0208
 	WM_MOUSEMOVE            = 0x0200
+	WM_MOUSELEAVE           = 0x02A3
 	WM_MOUSEWHEEL           = 0x020A
 	WM_MOUSEHWHEEL          = 0x020E
 	WM_NCACTIVATE           = 0x0086
@@ -312,6 +320,9 @@ const (
 	PM_NOREMOVE = 0x0000
 
 	GHND = 0x0042
+
+	THE_LEAVE     = 0x00000002
+	TME_NONCLIENT = 0x00000010
 
 	CF_UNICODETEXT = 13
 	IMAGE_BITMAP   = 0
@@ -387,6 +398,7 @@ var (
 	_SetWindowPlacement          = user32.NewProc("SetWindowPlacement")
 	_SetWindowPos                = user32.NewProc("SetWindowPos")
 	_SetWindowText               = user32.NewProc("SetWindowTextW")
+	_TrackMouseEvent             = user32.NewProc("TrackMouseEvent")
 	_TranslateMessage            = user32.NewProc("TranslateMessage")
 	_UnregisterClass             = user32.NewProc("UnregisterClassW")
 	_UpdateWindow                = user32.NewProc("UpdateWindow")
@@ -828,6 +840,13 @@ func ShowWindow(hwnd syscall.Handle, nCmdShow int32) {
 
 func TranslateMessage(m *Msg) {
 	_TranslateMessage.Call(uintptr(unsafe.Pointer(m)))
+}
+func TrackMouseEvent(t TrackMouseEventStruct) {
+	t.cbSize = uint32(unsafe.Sizeof(t))
+	r, _, err := _TrackMouseEvent.Call(uintptr(unsafe.Pointer(&t)))
+	if r == 0 {
+		fmt.Printf("TrackMouseEvent failed: %v\n", err)
+	}
 }
 
 func UnregisterClass(cls uint16, hInst syscall.Handle) {

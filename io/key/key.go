@@ -103,8 +103,9 @@ type Event struct {
 // An EditEvent requests an edit by an input method.
 type EditEvent struct {
 	// Range specifies the range to replace with Text.
-	Range Range
-	Text  string
+	Range   Range
+	Text    string
+	Preedit bool // true for IME preedit
 }
 
 // FocusFilter matches any [FocusEvent], [EditEvent], [SnippetEvent],

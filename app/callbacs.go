@@ -116,9 +116,9 @@ func (c *Callbacks) SetComposingRegion(r key.Range) {
 	c.w.ImeState.Compose = r
 }
 
-func (c *Callbacks) EditorInsert(text string) {
+func (c *Callbacks) EditorInsert(text string, preedit bool) {
 	sel := c.w.ImeState.Selection.Range
-	c.EditorReplace(sel, text)
+	c.EditorReplace(sel, text, preedit)
 	start := sel.Start
 	if sel.End < start {
 		start = sel.End
@@ -128,9 +128,9 @@ func (c *Callbacks) EditorInsert(text string) {
 	c.SetEditorSelection(sel)
 }
 
-func (c *Callbacks) EditorReplace(r key.Range, text string) {
+func (c *Callbacks) EditorReplace(r key.Range, text string, preedit bool) {
 	c.w.ImeState.Replace(r, text)
-	c.Event(key.EditEvent{Range: r, Text: text})
+	c.Event(key.EditEvent{Range: r, Text: text, Preedit: preedit})
 	c.Event(key.SnippetEvent(c.w.ImeState.Snippet.Range))
 }
 

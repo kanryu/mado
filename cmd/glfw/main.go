@@ -111,7 +111,7 @@ func fCursorEnterCallback(w *glfw.Window, entered bool) {
 	fmt.Println("CursorEnter")
 }
 func fScrollCallback(w *glfw.Window, xoff float64, yoff float64) {
-	fmt.Println("Scroll")
+	fmt.Println("Scroll", xoff, yoff)
 }
 func fCharCallback(w *glfw.Window, char rune) {
 	fmt.Println("Char", char)

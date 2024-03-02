@@ -8,6 +8,9 @@ type MoveEvent struct {
 type SizeEvent struct {
 	Size image.Point
 }
+type CloseEvent struct {
+}
 
-func (MoveEvent) ImplementsEvent() {}
-func (SizeEvent) ImplementsEvent() {}
+func (MoveEvent) ImplementsEvent()  {}
+func (SizeEvent) ImplementsEvent()  {}
+func (CloseEvent) ImplementsEvent() {}
