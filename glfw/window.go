@@ -246,10 +246,47 @@ func CreateWindow(width, height int, title string, monitor *Monitor, share *Wind
 	c := &Callbacks{}
 	w := app.NewWindow(c, options...)
 	wnd := &Window{
-		App:       theApp,
-		data:      w,
-		callbacks: c,
+		App:                    theApp,
+		data:                   w,
+		callbacks:              c,
+		fPosHolder:             func(w *Window, xpos int, ypos int) {},
+		fSizeHolder:            func(w *Window, width int, height int) {},
+		fFramebufferSizeHolder: func(w *Window, width int, height int) {},
+		fCloseHolder:           func(w *Window) {},
+		fMaximizeHolder:        func(w *Window, maximized bool) {},
+		fContentScaleHolder:    func(w *Window, x float32, y float32) {},
+		fRefreshHolder:         func(w *Window) {},
+		fFocusHolder:           func(w *Window, focused bool) {},
+		fIconifyHolder:         func(w *Window, iconified bool) {},
+		fPreeditHolder: func(
+			w *Window,
+			preeditCount int,
+			preeditString string,
+			blockCount int,
+			blockSizes string,
+			focusedBlock int,
+			caret int,
+		) {
+		},
+		fImeStatusHolder: func(w *Window) {},
+		fPreeditCandidateHolder: func(
+			w *Window,
+			candidatesCount int,
+			selectedIndex int,
+			pageStart int,
+			pageSize int,
+		) {
+		},
+		fMouseButtonHolder: func(w *Window, button MouseButton, action Action, mod ModifierKey) {},
+		fCursorPosHolder:   func(w *Window, xpos float64, ypos float64) {},
+		fCursorEnterHolder: func(w *Window, entered bool) {},
+		fScrollHolder:      func(w *Window, xoff float64, yoff float64) {},
+		fKeyHolder:         func(w *Window, key Key, scancode int, action Action, mods ModifierKey) {},
+		fCharHolder:        func(w *Window, char rune) {},
+		fCharModsHolder:    func(w *Window, char rune, mods ModifierKey) {},
+		fDropHolder:        func(w *Window, names []string) {},
 	}
+	c.SetGlfwWindow(wnd)
 	theApp.appendWindow(wnd)
 	return wnd, nil
 }
@@ -704,6 +741,141 @@ type IconifyCallback func(w *Window, iconified bool)
 func (w *Window) SetIconifyCallback(cbfun IconifyCallback) (previous IconifyCallback) {
 	previous = w.fIconifyHolder
 	w.fIconifyHolder = cbfun
+	panicError()
+	return previous
+}
+
+// KeyCallback is the key callback.
+type KeyCallback func(w *Window, key Key, scancode int, action Action, mods ModifierKey)
+
+// SetKeyCallback sets the key callback which is called when a key is pressed,
+// repeated or released.
+//
+// The key functions deal with physical keys, with layout independent key tokens
+// named after their values in the standard US keyboard layout. If you want to
+// input text, use the SetCharCallback instead.
+//
+// When a window loses focus, it will generate synthetic key release events for
+// all pressed keys. You can tell these events from user-generated events by the
+// fact that the synthetic ones are generated after the window has lost focus,
+// i.e. Focused will be false and the focus callback will have already been
+// called.
+func (w *Window) SetKeyCallback(cbfun KeyCallback) (previous KeyCallback) {
+	previous = w.fKeyHolder
+	w.fKeyHolder = cbfun
+	panicError()
+	return previous
+}
+
+// CharCallback is the character callback.
+type CharCallback func(w *Window, char rune)
+
+// SetCharCallback sets the character callback which is called when a
+// Unicode character is input.
+//
+// The character callback is intended for Unicode text input. As it deals with
+// characters, it is keyboard layout dependent, whereas the
+// key callback is not. Characters do not map 1:1
+// to physical keys, as a key may produce zero, one or more characters. If you
+// want to know whether a specific physical key was pressed or released, see
+// the key callback instead.
+//
+// The character callback behaves as system text input normally does and will
+// not be called if modifier keys are held down that would prevent normal text
+// input on that platform, for example a Super (Command) key on OS X or Alt key
+// on Windows. There is a character with modifiers callback that receives these events.
+func (w *Window) SetCharCallback(cbfun CharCallback) (previous CharCallback) {
+	previous = w.fCharHolder
+	w.fCharHolder = cbfun
+	panicError()
+	return previous
+}
+
+// CharModsCallback is the character with modifiers callback.
+type CharModsCallback func(w *Window, char rune, mods ModifierKey)
+
+// SetCharModsCallback sets the character with modifiers callback which is called when a
+// Unicode character is input regardless of what modifier keys are used.
+//
+// Deprecated: Scheduled for removal in version 4.0.
+//
+// The character with modifiers callback is intended for implementing custom
+// Unicode character input. For regular Unicode text input, see the
+// character callback. Like the character callback, the character with modifiers callback
+// deals with characters and is keyboard layout dependent. Characters do not
+// map 1:1 to physical keys, as a key may produce zero, one or more characters.
+// If you want to know whether a specific physical key was pressed or released,
+// see the key callback instead.
+func (w *Window) SetCharModsCallback(cbfun CharModsCallback) (previous CharModsCallback) {
+	previous = w.fCharModsHolder
+	w.fCharModsHolder = cbfun
+	panicError()
+	return previous
+}
+
+// MouseButtonCallback is the mouse button callback.
+type MouseButtonCallback func(w *Window, button MouseButton, action Action, mods ModifierKey)
+
+// SetMouseButtonCallback sets the mouse button callback which is called when a
+// mouse button is pressed or released.
+//
+// When a window loses focus, it will generate synthetic mouse button release
+// events for all pressed mouse buttons. You can tell these events from
+// user-generated events by the fact that the synthetic ones are generated after
+// the window has lost focus, i.e. Focused will be false and the focus
+// callback will have already been called.
+func (w *Window) SetMouseButtonCallback(cbfun MouseButtonCallback) (previous MouseButtonCallback) {
+	previous = w.fMouseButtonHolder
+	w.fMouseButtonHolder = cbfun
+	panicError()
+	return previous
+}
+
+// CursorPosCallback the cursor position callback.
+type CursorPosCallback func(w *Window, xpos float64, ypos float64)
+
+// SetCursorPosCallback sets the cursor position callback which is called
+// when the cursor is moved. The callback is provided with the position relative
+// to the upper-left corner of the client area of the window.
+func (w *Window) SetCursorPosCallback(cbfun CursorPosCallback) (previous CursorPosCallback) {
+	previous = w.fCursorPosHolder
+	w.fCursorPosHolder = cbfun
+	panicError()
+	return previous
+}
+
+// CursorEnterCallback is the cursor boundary crossing callback.
+type CursorEnterCallback func(w *Window, entered bool)
+
+// SetCursorEnterCallback the cursor boundary crossing callback which is called
+// when the cursor enters or leaves the client area of the window.
+func (w *Window) SetCursorEnterCallback(cbfun CursorEnterCallback) (previous CursorEnterCallback) {
+	previous = w.fCursorEnterHolder
+	w.fCursorEnterHolder = cbfun
+	panicError()
+	return previous
+}
+
+// ScrollCallback is the scroll callback.
+type ScrollCallback func(w *Window, xoff float64, yoff float64)
+
+// SetScrollCallback sets the scroll callback which is called when a scrolling
+// device is used, such as a mouse wheel or scrolling area of a touchpad.
+func (w *Window) SetScrollCallback(cbfun ScrollCallback) (previous ScrollCallback) {
+	previous = w.fScrollHolder
+	w.fScrollHolder = cbfun
+	panicError()
+	return previous
+}
+
+// DropCallback is the drop callback.
+type DropCallback func(w *Window, names []string)
+
+// SetDropCallback sets the drop callback which is called when an object
+// is dropped over the window.
+func (w *Window) SetDropCallback(cbfun DropCallback) (previous DropCallback) {
+	previous = w.fDropHolder
+	w.fDropHolder = cbfun
 	panicError()
 	return previous
 }

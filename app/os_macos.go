@@ -500,7 +500,7 @@ func (w *window) setStage(stage Stage) {
 }
 
 //export gio_onKeys
-func gio_onKeys(view, cstr C.CFTypeRef, ti C.double, mods C.NSUInteger, keyDown C.bool) {
+func gio_onKeys(view, cstr C.CFTypeRef, keyCode C.UInt16, ti C.double, mods C.NSUInteger, keyDown C.bool) {
 	str := nsstringToString(cstr)
 	kmods := convertMods(mods)
 	ks := key.Release
@@ -512,6 +512,7 @@ func gio_onKeys(view, cstr C.CFTypeRef, ti C.double, mods C.NSUInteger, keyDown 
 		if n, ok := convertKey(k); ok {
 			w.w.Event(key.Event{
 				Name:      n,
+				KeyCode:   key.KeyCode(keyCode),
 				Modifiers: kmods,
 				State:     ks,
 			})

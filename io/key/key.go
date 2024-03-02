@@ -94,6 +94,8 @@ type Event struct {
 	Name Name
 	// Modifiers is the set of active modifiers when the key was pressed.
 	Modifiers Modifiers
+	// KeyCode is the keycode of the key when the event was fired.
+	KeyCode KeyCode
 	// State is the state of the key when the event was fired.
 	State State
 }
@@ -132,6 +134,9 @@ const (
 	// HintPassword hints that password input is expected. It may disable autocorrection and enable password autofill.
 	HintPassword
 )
+
+// KeyCode is a set of keyboard keys
+type KeyCode int
 
 // State is the state of a key during an event.
 type State uint8

@@ -127,11 +127,11 @@ static void handleMouse(NSView *view, NSEvent *event, int typ, CGFloat dx, CGFlo
 - (void)keyDown:(NSEvent *)event {
 	[self interpretKeyEvents:[NSArray arrayWithObject:event]];
 	NSString *keys = [event charactersIgnoringModifiers];
-	gio_onKeys((__bridge CFTypeRef)self, (__bridge CFTypeRef)keys, [event timestamp], [event modifierFlags], true);
+	gio_onKeys((__bridge CFTypeRef)self, (__bridge CFTypeRef)keys, [event keyCode], [event timestamp], [event modifierFlags], true);
 }
 - (void)keyUp:(NSEvent *)event {
 	NSString *keys = [event charactersIgnoringModifiers];
-	gio_onKeys((__bridge CFTypeRef)self, (__bridge CFTypeRef)keys, [event timestamp], [event modifierFlags], false);
+	gio_onKeys((__bridge CFTypeRef)self, (__bridge CFTypeRef)keys, [event keyCode], [event timestamp], [event modifierFlags], false);
 }
 - (void)insertText:(id)string {
 	gio_onText((__bridge CFTypeRef)self, (__bridge CFTypeRef)string);

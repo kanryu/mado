@@ -250,6 +250,7 @@ func windowProc(hwnd syscall.Handle, msg uint32, wParam, lParam uintptr) uintptr
 		if n, ok := convertKeyCode(wParam); ok {
 			e := key.Event{
 				Name:      n,
+				KeyCode:   key.KeyCode(wParam),
 				Modifiers: getModifiers(),
 				State:     key.Press,
 			}

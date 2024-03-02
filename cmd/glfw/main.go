@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"runtime"
 
 	"github.com/kanryu/mado/glfw"
@@ -23,6 +24,7 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
+	setCallbacks(window)
 
 	window.MakeContextCurrent()
 
@@ -31,4 +33,17 @@ func main() {
 		window.SwapBuffers()
 		glfw.PollEvents()
 	}
+}
+
+func setCallbacks(w *glfw.Window) {
+	w.SetMouseButtonCallback(fMouseButtonCb)
+	w.SetKeyCallback(fKeyCb)
+}
+
+func fMouseButtonCb(w *glfw.Window, button glfw.MouseButton, action glfw.Action, mod glfw.ModifierKey) {
+	fmt.Println("Mouse", button, action, mod)
+}
+
+func fKeyCb(w *glfw.Window, key glfw.Key, scancode int, action glfw.Action, mods glfw.ModifierKey) {
+	fmt.Println("Key", key, scancode, action, mods)
 }

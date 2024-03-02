@@ -10,6 +10,7 @@ import (
 	"github.com/kanryu/mado/io/event"
 	"github.com/kanryu/mado/io/input"
 	"github.com/kanryu/mado/io/key"
+	"github.com/kanryu/mado/io/pointer"
 	"github.com/kanryu/mado/io/system"
 )
 
@@ -17,6 +18,7 @@ var _ mado.Callbacks = (*Callbacks)(nil)
 
 type Callbacks struct {
 	W          *app.Window
+	Gw         *Window
 	D          mado.Driver
 	Busy       bool
 	WaitEvents []event.Event
@@ -24,6 +26,10 @@ type Callbacks struct {
 
 func (c *Callbacks) SetWindow(w mado.Window) {
 	c.W = w.(*app.Window)
+}
+
+func (c *Callbacks) SetGlfwWindow(gw *Window) {
+	c.Gw = gw
 }
 
 func (c *Callbacks) SetDriver(d mado.Driver) {
@@ -50,6 +56,12 @@ func (c *Callbacks) Event(e event.Event) bool {
 		copy(c.WaitEvents, c.WaitEvents[1:])
 		c.WaitEvents = c.WaitEvents[:len(c.WaitEvents)-1]
 		handled = c.W.ProcessEvent(c.D, e)
+		switch e2 := e.(type) {
+		case pointer.Event:
+			c.Gw.fMouseButtonHolder(c.Gw, MouseButton(e2.Buttons), Action(e2.Kind), ModifierKey(e2.Modifiers))
+		case key.Event:
+			c.Gw.fKeyHolder(c.Gw, Key(e2.KeyCode), 0, Action(e2.State), ModifierKey(e2.Modifiers))
+		}
 	}
 	c.Busy = false
 	select {

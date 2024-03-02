@@ -34,14 +34,17 @@ type Application struct {
 	// active keeps track the open windows, such that application
 	// can shut down, when all of them are closed.
 	Active sync.WaitGroup
+
+	fJoystickHolder func(joy Joystick, event PeripheralEvent)
 }
 
 func NewApplication(ctx context.Context, stop context.CancelFunc) *Application {
 	ctx, cancel := context.WithCancel(ctx)
 	return &Application{
-		Context:  ctx,
-		Stop:     stop,
-		Shutdown: cancel,
+		Context:         ctx,
+		Stop:            stop,
+		Shutdown:        cancel,
+		fJoystickHolder: func(joy Joystick, event PeripheralEvent) {},
 	}
 }
 
