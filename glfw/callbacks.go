@@ -71,19 +71,19 @@ func (c *Callbacks) Event(e event.Event) bool {
 		case mado.StageEvent:
 			switch e2.Stage {
 			case mado.StagePaused:
-				if c.W.Decorations.Config.Mode == mado.Minimized {
+				if e2.WindowMode == mado.Minimized {
 					c.Gw.fIconifyHolder(c.Gw, true)
 					c.PrevWindowMode = mado.Minimized
 				}
 			case mado.StageRunning:
-				if c.W.Decorations.Config.Mode == mado.Maximized && c.PrevWindowMode != mado.Maximized {
+				if e2.WindowMode == mado.Maximized && c.PrevWindowMode != mado.Maximized {
 					c.Gw.fMaximizeHolder(c.Gw, true)
 					c.PrevWindowMode = mado.Maximized
-				} else if c.W.Decorations.Config.Mode == mado.Fullscreen && c.PrevWindowMode != mado.Fullscreen {
+				} else if e2.WindowMode == mado.Fullscreen && c.PrevWindowMode != mado.Fullscreen {
 					c.Gw.fMaximizeHolder(c.Gw, true)
 					c.PrevWindowMode = mado.Fullscreen
 				}
-				if c.W.Decorations.Config.Mode == mado.Windowed {
+				if e2.WindowMode == mado.Windowed {
 					if c.PrevWindowStage == mado.StageInactive {
 						c.Gw.fFocusHolder(c.Gw, true)
 					}

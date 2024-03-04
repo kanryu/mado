@@ -641,11 +641,9 @@ func gio_onWindowClose(view C.CFTypeRef) {
 func gio_onWindowMaximize(view C.CFTypeRef, maximized C.bool) {
 	w := mustView(view)
 	if maximized {
-		w.config.Mode = mado.Maximized
-		w.setStage(mado.StageRunning)
+		w.w.Event(mado.StageEvent{Stage: mado.StageRunning, WindowMode: mado.Maximized})
 	} else {
-		w.config.Mode = mado.Windowed
-		w.setStage(mado.StageRunning)
+		w.w.Event(mado.StageEvent{Stage: mado.StageRunning, WindowMode: mado.Windowed})
 	}
 }
 
@@ -653,11 +651,9 @@ func gio_onWindowMaximize(view C.CFTypeRef, maximized C.bool) {
 func gio_onWindowIconify(view C.CFTypeRef, iconify C.bool) {
 	w := mustView(view)
 	if iconify {
-		w.config.Mode = mado.Minimized
-		w.setStage(mado.StagePaused)
+		w.w.Event(mado.StageEvent{Stage: mado.StagePaused, WindowMode: mado.Minimized})
 	} else {
-		w.config.Mode = mado.Windowed
-		w.setStage(mado.StageRunning)
+		w.w.Event(mado.StageEvent{Stage: mado.StageRunning, WindowMode: mado.Windowed})
 	}
 }
 
@@ -901,6 +897,7 @@ func gio_onShow(view C.CFTypeRef) {
 //export gio_onFullscreen
 func gio_onFullscreen(view C.CFTypeRef) {
 	w := mustView(view)
+
 	w.config.Mode = mado.Fullscreen
 	w.w.Event(mado.ConfigEvent{Config: w.config})
 }

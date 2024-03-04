@@ -24,19 +24,21 @@ bool withPollEvents = false;
 - (void)windowWillMiniaturize:(NSNotification *)notification {
 	NSWindow *window = (NSWindow *)[notification object];
 	gio_onWindowIconify((__bridge CFTypeRef)window.contentView, true);
-	gio_onHide((__bridge CFTypeRef)window.contentView);
+	//gio_onHide((__bridge CFTypeRef)window.contentView);
 }
 - (void)windowDidDeminiaturize:(NSNotification *)notification {
 	NSWindow *window = (NSWindow *)[notification object];
 	gio_onWindowIconify((__bridge CFTypeRef)window.contentView, false);
-	gio_onShow((__bridge CFTypeRef)window.contentView);
+	//gio_onShow((__bridge CFTypeRef)window.contentView);
 }
 - (void)windowWillEnterFullScreen:(NSNotification *)notification {
 	NSWindow *window = (NSWindow *)[notification object];
+	gio_onWindowMaximize((__bridge CFTypeRef)window.contentView, true);
 	gio_onFullscreen((__bridge CFTypeRef)window.contentView);
 }
 - (void)windowWillExitFullScreen:(NSNotification *)notification {
 	NSWindow *window = (NSWindow *)[notification object];
+	gio_onWindowMaximize((__bridge CFTypeRef)window.contentView, false);
 	gio_onWindowed((__bridge CFTypeRef)window.contentView);
 }
 - (void)windowDidChangeScreen:(NSNotification *)notification {
