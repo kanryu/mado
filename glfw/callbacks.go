@@ -14,23 +14,23 @@ import (
 	"github.com/kanryu/mado/io/pointer"
 	"github.com/kanryu/mado/io/system"
 	"github.com/kanryu/mado/io/window"
-	"github.com/kanryu/mado/unit"
 )
 
 var _ mado.Callbacks = (*Callbacks)(nil)
 
 type Callbacks struct {
-	W               *app.Window
-	Gw              *Window
-	D               mado.Driver
-	Busy            bool
-	PrevWindowMode  mado.WindowMode
-	PrevWindowStage mado.Stage
-	PrevMetric      unit.Metric
-	PrevWindowSize  image.Point
-	PrevCursorPos   f32.Point
-	PrevModifiers   key.Modifiers
-	WaitEvents      []event.Event
+	W                   *app.Window
+	Gw                  *Window
+	D                   mado.Driver
+	Busy                bool
+	PrevWindowMode      mado.WindowMode
+	PrevWindowStage     mado.Stage
+	PrevScaling         f32.Point
+	PrevWindowSize      image.Point
+	PrevFramebufferSize image.Point
+	PrevCursorPos       f32.Point
+	PrevModifiers       key.Modifiers
+	WaitEvents          []event.Event
 }
 
 func (c *Callbacks) SetWindow(w mado.Window) {
@@ -76,15 +76,23 @@ func (c *Callbacks) Event(e event.Event) bool {
 					c.PrevWindowMode = mado.Minimized
 				}
 			case mado.StageRunning:
-				if c.W.Decorations.Config.Mode == mado.Maximized {
+				if c.W.Decorations.Config.Mode == mado.Maximized && c.PrevWindowMode != mado.Maximized {
 					c.Gw.fMaximizeHolder(c.Gw, true)
 					c.PrevWindowMode = mado.Maximized
+				} else if c.W.Decorations.Config.Mode == mado.Fullscreen && c.PrevWindowMode != mado.Fullscreen {
+					c.Gw.fMaximizeHolder(c.Gw, true)
+					c.PrevWindowMode = mado.Fullscreen
 				}
 				if c.W.Decorations.Config.Mode == mado.Windowed {
 					if c.PrevWindowStage == mado.StageInactive {
 						c.Gw.fFocusHolder(c.Gw, true)
-					} else if c.PrevWindowMode == mado.Minimized {
+					}
+					if c.PrevWindowMode == mado.Minimized {
 						c.Gw.fIconifyHolder(c.Gw, false)
+					} else if c.PrevWindowMode == mado.Maximized {
+						c.Gw.fMaximizeHolder(c.Gw, false)
+					} else if c.PrevWindowMode == mado.Fullscreen {
+						c.Gw.fMaximizeHolder(c.Gw, false)
 					} else if c.PrevWindowMode != mado.Windowed {
 						c.Gw.fMaximizeHolder(c.Gw, false)
 					}
@@ -94,19 +102,24 @@ func (c *Callbacks) Event(e event.Event) bool {
 				c.Gw.fFocusHolder(c.Gw, false)
 				c.PrevWindowStage = mado.StageInactive
 			}
-		case mado.FrameEvent:
-			if c.PrevMetric != e2.Metric {
-				c.PrevMetric = e2.Metric
-				c.Gw.fContentScaleHolder(c.Gw, e2.Metric.PxPerDp, e2.Metric.PxPerDp)
+		case window.FrameScaleEvent:
+			if c.PrevScaling != e2.Scaling {
+				c.PrevScaling = e2.Scaling
+				c.Gw.fContentScaleHolder(c.Gw, e2.Scaling.X, e2.Scaling.Y)
 			}
+		case mado.FrameEvent:
 			c.Gw.fRefreshHolder(c.Gw)
 		case window.MoveEvent:
 			c.Gw.fPosHolder(c.Gw, e2.Pos.X, e2.Pos.Y)
 		case window.SizeEvent:
 			if c.PrevWindowSize != e2.Size {
-				c.Gw.fFramebufferSizeHolder(c.Gw, e2.Size.X, e2.Size.Y)
 				c.Gw.fSizeHolder(c.Gw, e2.Size.X, e2.Size.Y)
 				c.PrevWindowSize = e2.Size
+			}
+		case window.FramebufferSizeEvent:
+			if c.PrevFramebufferSize != e2.Size {
+				c.Gw.fFramebufferSizeHolder(c.Gw, e2.Size.X, e2.Size.Y)
+				c.PrevFramebufferSize = e2.Size
 			}
 		case window.CloseEvent:
 			c.Gw.fCloseHolder(c.Gw)

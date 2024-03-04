@@ -14,16 +14,21 @@ bool withPollEvents = false;
 @interface GioAppDelegate : NSObject<NSApplicationDelegate>
 @end
 
-@interface GioWindowDelegate : NSObject<NSWindowDelegate>
+@interface GioWindowDelegate : NSObject<NSWindowDelegate> {
+	NSSize windowSize;
+	NSSize fbSize;
+}
 @end
 
 @implementation GioWindowDelegate
 - (void)windowWillMiniaturize:(NSNotification *)notification {
 	NSWindow *window = (NSWindow *)[notification object];
+	gio_onWindowIconify((__bridge CFTypeRef)window.contentView, true);
 	gio_onHide((__bridge CFTypeRef)window.contentView);
 }
 - (void)windowDidDeminiaturize:(NSNotification *)notification {
 	NSWindow *window = (NSWindow *)[notification object];
+	gio_onWindowIconify((__bridge CFTypeRef)window.contentView, false);
 	gio_onShow((__bridge CFTypeRef)window.contentView);
 }
 - (void)windowWillEnterFullScreen:(NSNotification *)notification {
@@ -48,21 +53,60 @@ bool withPollEvents = false;
 	NSWindow *window = (NSWindow *)[notification object];
 	gio_onFocus((__bridge CFTypeRef)window.contentView, 0);
 }
+- (void)windowDidMove:(NSNotification *)notification
+{
+	NSWindow *window = (NSWindow *)[notification object];
+    int x, y;
+	@autoreleasepool {
+		const NSRect contentRect =
+			[window contentRectForFrameRect:[window frame]];
+
+		x = contentRect.origin.x;
+		y = CGDisplayBounds(CGMainDisplayID()).size.height - contentRect.origin.y - contentRect.size.height;
+    } // autoreleasepool
+	gio_onWindowPos((__bridge CFTypeRef)window.contentView, x, y);
+}
+- (BOOL)windowShouldClose:(NSWindow*)window
+{
+    gio_onWindowClose((__bridge CFTypeRef)window.contentView);
+    return YES;
+}
+- (void)windowDidResize:(NSNotification *)notification
+{
+	NSWindow *window = (NSWindow *)[notification object];
+	@autoreleasepool {
+		const NSRect contentRect =
+			[window contentRectForFrameRect:[window frame]];
+	    const NSRect fbRect = [window convertRectToBacking:contentRect];
+		if (fbRect.size.width != fbSize.width ||
+			fbRect.size.height != fbSize.height)
+		{
+			fbSize.width  = fbRect.size.width;
+			fbSize.height = fbRect.size.height;
+			gio_onFramebufferSize((__bridge CFTypeRef)window.contentView, fbRect.size.width, fbRect.size.height);
+		}
+		if (contentRect.size.width != windowSize.width ||
+			contentRect.size.height != windowSize.height)
+		{
+			windowSize.width  = contentRect.size.width;
+			windowSize.height = contentRect.size.height;
+			gio_onWindowSize((__bridge CFTypeRef)window.contentView, contentRect.size.width, contentRect.size.height);
+		}
+	}
+}
 @end
 
-static void handleMouse(NSView *view, NSEvent *event, int typ, CGFloat dx, CGFloat dy) {
-	NSPoint p = [view convertPoint:[event locationInWindow] fromView:nil];
-	if (!event.hasPreciseScrollingDeltas) {
-		// dx and dy are in rows and columns.
-		dx *= 10;
-		dy *= 10;
-	}
-	// Origin is in the lower left corner. Convert to upper left.
-	CGFloat height = view.bounds.size.height;
-	gio_onMouse((__bridge CFTypeRef)view, (__bridge CFTypeRef)event, typ, event.buttonNumber, p.x, height - p.y, dx, dy, [event timestamp], [event modifierFlags]);
+@interface GioView : NSView <CALayerDelegate,NSTextInputClient> {
+	bool cursorTracked;
+	NSSize windowSize;
+	NSSize fbSize;
+	float xscale;
+	float yscale;
 }
-
-@interface GioView : NSView <CALayerDelegate,NSTextInputClient>
+- (void)handleMouse:(NSEvent*) event
+			   type:(int) typ
+			     dx:(CGFloat) dx
+				 dy:(CGFloat) dy;
 @end
 
 @implementation GioView
@@ -84,45 +128,103 @@ static void handleMouse(NSView *view, NSEvent *event, int typ, CGFloat dx, CGFlo
 	layer.delegate = self;
 	return layer;
 }
+// - (void)viewDidChangeBackingProperties
+// {
+//     const NSRect contentRect = [self frame];
+//     const NSRect fbRect = [self convertRectToBacking:contentRect];
+//     const float xscale = fbRect.size.width / contentRect.size.width;
+//     const float yscale = fbRect.size.height / contentRect.size.height;
+// 	@autoreleasepool {
+// 		if (xscale != self.xscale || yscale != self.yscale)
+// 		{
+// 			if (self.retina && self.layer)
+// 				[self.layer setContentsScale:[self.object backingScaleFactor]];
+
+// 			self.xscale = xscale;
+// 			wself.yscale = yscale;
+// 			gio_onContentScale((__bridge CFTypeRef)self, xscale, yscale);
+// 		}
+
+// 		if (fbRect.size.width != self.fbWidth ||
+// 			fbRect.size.height != self.fbHeight)
+// 		{
+// 			self.fbWidth  = fbRect.size.width;
+// 			self.fbHeight = fbRect.size.height;
+// 			gio_onFramebufferSize((__bridge CFTypeRef)self, fbRect.size.width, fbRect.size.height);
+// 		}
+// 		if (contentRect.size.width != windowSize.width ||
+// 			contentRect.size.height != windowSize.height)
+// 		{
+// 			windowSize.width  = contentRect.size.width;
+// 			windowSize.height = contentRect.size.height;
+// 			gio_onWindowSize((__bridge CFTypeRef)window.contentView, contentRect.size.width, contentRect.size.height);
+// 		}
+// 	}
+// }
 - (void)viewDidMoveToWindow {
 	if (self.window == nil) {
 		gio_onClose((__bridge CFTypeRef)self);
 	}
 }
+- (void)handleMouse:(NSEvent*) event
+			   type:(int) typ
+			     dx:(CGFloat) dx
+				 dy:(CGFloat) dy {
+	NSPoint p = [self convertPoint:[event locationInWindow] fromView:nil];
+	if (!event.hasPreciseScrollingDeltas) {
+		// dx and dy are in rows and columns.
+		dx *= 10;
+		dy *= 10;
+	}
+	if (!NSMouseInRect(p, self.bounds, NO)) {
+		if (cursorTracked) {
+			gio_onCursorEnter((__bridge CFTypeRef)self, false);
+		}
+		cursorTracked = false;
+		return;
+	}
+	if (!cursorTracked) {
+		gio_onCursorEnter((__bridge CFTypeRef)self, true);
+	}
+	cursorTracked = true;
+	// Origin is in the lower left corner. Convert to upper left.
+	CGFloat height = self.bounds.size.height;
+	gio_onMouse((__bridge CFTypeRef)self, (__bridge CFTypeRef)event, typ, event.buttonNumber, p.x, height - p.y, dx, dy, [event timestamp], [event modifierFlags]);
+}
 - (void)mouseDown:(NSEvent *)event {
-	handleMouse(self, event, MOUSE_DOWN, 0, 0);
+	[self handleMouse:event type:MOUSE_DOWN dx:0 dy:0];
 }
 - (void)mouseUp:(NSEvent *)event {
-	handleMouse(self, event, MOUSE_UP, 0, 0);
+	[self handleMouse:event type:MOUSE_UP dx:0 dy:0];
 }
 - (void)rightMouseDown:(NSEvent *)event {
-	handleMouse(self, event, MOUSE_DOWN, 0, 0);
+	[self handleMouse:event type:MOUSE_DOWN dx:0 dy:0];
 }
 - (void)rightMouseUp:(NSEvent *)event {
-	handleMouse(self, event, MOUSE_UP, 0, 0);
+	[self handleMouse:event type:MOUSE_UP dx:0 dy:0];
 }
 - (void)otherMouseDown:(NSEvent *)event {
-	handleMouse(self, event, MOUSE_DOWN, 0, 0);
+	[self handleMouse:event type:MOUSE_DOWN dx:0 dy:0];
 }
 - (void)otherMouseUp:(NSEvent *)event {
-	handleMouse(self, event, MOUSE_UP, 0, 0);
+	[self handleMouse:event type:MOUSE_UP dx:0 dy:0];
 }
 - (void)mouseMoved:(NSEvent *)event {
-	handleMouse(self, event, MOUSE_MOVE, 0, 0);
+	[self handleMouse:event type:MOUSE_MOVE dx:0 dy:0];
 }
 - (void)mouseDragged:(NSEvent *)event {
-	handleMouse(self, event, MOUSE_MOVE, 0, 0);
+	[self handleMouse:event type:MOUSE_MOVE dx:0 dy:0];
 }
 - (void)rightMouseDragged:(NSEvent *)event {
-	handleMouse(self, event, MOUSE_MOVE, 0, 0);
+	[self handleMouse:event type:MOUSE_MOVE dx:0 dy:0];
 }
 - (void)otherMouseDragged:(NSEvent *)event {
-	handleMouse(self, event, MOUSE_MOVE, 0, 0);
+	[self handleMouse:event type:MOUSE_MOVE dx:0 dy:0];
 }
 - (void)scrollWheel:(NSEvent *)event {
 	CGFloat dx = -event.scrollingDeltaX;
 	CGFloat dy = -event.scrollingDeltaY;
-	handleMouse(self, event, MOUSE_SCROLL, dx, dy);
+	[self handleMouse:event type:MOUSE_SCROLL dx:dx dy:dy];
 }
 - (void)keyDown:(NSEvent *)event {
 	[self interpretKeyEvents:[NSArray arrayWithObject:event]];

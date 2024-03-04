@@ -21,6 +21,8 @@ import (
 	"github.com/kanryu/mado/io/pointer"
 	"github.com/kanryu/mado/io/system"
 	"github.com/kanryu/mado/io/transfer"
+	iowindow "github.com/kanryu/mado/io/window"
+
 	"github.com/kanryu/mado/unit"
 
 	_ "github.com/kanryu/mado/internal/cocoainit"
@@ -236,7 +238,7 @@ static void invalidateCharacterCoordinates(CFTypeRef viewRef) {
 static bool isPreeditText(void) {
 	NSEvent* event = [NSApp currentEvent];
 	const int plain = [event modifierFlags] & NSEventModifierFlagCommand;
-	return !!plain
+	return !!plain;
 }
 
 */
@@ -499,9 +501,9 @@ func (w *window) runOnMain(f func()) {
 }
 
 func (w *window) setStage(stage mado.Stage) {
-	if stage == w.stage {
-		return
-	}
+	// if stage == w.stage {
+	// 	return
+	// }
 	w.stage = stage
 	w.w.Event(mado.StageEvent{Stage: stage})
 }
@@ -530,7 +532,7 @@ func gio_onKeys(view, cstr C.CFTypeRef, keyCode C.UInt16, ti C.double, mods C.NS
 //export gio_onText
 func gio_onText(view, cstr C.CFTypeRef) {
 	str := nsstringToString(cstr)
-	preedit := isPreeditText()
+	preedit := false
 	w := mustView(view)
 	w.w.EditorInsert(str, preedit)
 }
@@ -585,6 +587,12 @@ func gio_onMouse(view, evt C.CFTypeRef, cdir C.int, cbtn C.NSInteger, x, y, dx, 
 	})
 }
 
+//export gio_onCursorEnter
+func gio_onCursorEnter(view C.CFTypeRef, entered C.bool) {
+	w := mustView(view)
+	w.w.Event(pointer.CursorEnterEvent{Entered: bool(entered)})
+}
+
 //export gio_onDraw
 func gio_onDraw(view C.CFTypeRef) {
 	w := mustView(view)
@@ -595,7 +603,7 @@ func gio_onDraw(view C.CFTypeRef) {
 func gio_onFocus(view C.CFTypeRef, focus C.int) {
 	w := mustView(view)
 	w.w.Event(key.FocusEvent{Focus: focus == 1})
-	if w.stage >= StageInactive {
+	if w.stage >= mado.StageInactive {
 		if focus == 0 {
 			w.setStage(mado.StageInactive)
 		} else {
@@ -605,12 +613,68 @@ func gio_onFocus(view C.CFTypeRef, focus C.int) {
 	w.SetCursor(w.cursor)
 }
 
+//export gio_onWindowPos
+func gio_onWindowPos(view C.CFTypeRef, x C.int, y C.int) {
+	w := mustView(view)
+	w.w.Event(iowindow.MoveEvent{Pos: image.Point{X: int(x), Y: int(y)}})
+}
+
+//export gio_onWindowSize
+func gio_onWindowSize(view C.CFTypeRef, width C.int, height C.int) {
+	w := mustView(view)
+	w.w.Event(iowindow.SizeEvent{Size: image.Point{X: int(width), Y: int(height)}})
+}
+
+//export gio_onFramebufferSize
+func gio_onFramebufferSize(view C.CFTypeRef, width C.int, height C.int) {
+	w := mustView(view)
+	w.w.Event(iowindow.SizeEvent{Size: image.Point{X: int(width), Y: int(height)}})
+}
+
+//export gio_onWindowClose
+func gio_onWindowClose(view C.CFTypeRef) {
+	w := mustView(view)
+	w.w.Event(iowindow.CloseEvent{})
+}
+
+//export gio_onWindowMaximize
+func gio_onWindowMaximize(view C.CFTypeRef, maximized C.bool) {
+	w := mustView(view)
+	if maximized {
+		w.config.Mode = mado.Maximized
+		w.setStage(mado.StageRunning)
+	} else {
+		w.config.Mode = mado.Windowed
+		w.setStage(mado.StageRunning)
+	}
+}
+
+//export gio_onWindowIconify
+func gio_onWindowIconify(view C.CFTypeRef, iconify C.bool) {
+	w := mustView(view)
+	if iconify {
+		w.config.Mode = mado.Minimized
+		w.setStage(mado.StagePaused)
+	} else {
+		w.config.Mode = mado.Windowed
+		w.setStage(mado.StageRunning)
+	}
+}
+
 //export gio_onChangeScreen
 func gio_onChangeScreen(view C.CFTypeRef, did uint64) {
 	w := mustView(view)
 	w.displayLink.SetDisplayID(did)
 	C.setNeedsDisplay(w.view)
 }
+
+// //export gio_onContentScale
+// func gio_onContentScale(view C.CFTypeRef, xscale float32, yscale float32) {
+// 	w := mustView(view)
+// 	w.w.Event(iowindow.FrameScaleEvent{
+// 		Scaling: f32.Point{X: xscale, Y: yscale},
+// 	})
+// }
 
 //export gio_hasMarkedText
 func gio_hasMarkedText(view C.CFTypeRef) C.int {
@@ -679,7 +743,7 @@ func gio_setMarkedText(view, cstr C.CFTypeRef, selRange C.NSRange, replaceRange 
 			End:   end,
 		}
 	}
-	w.w.EditorReplace(rng, str)
+	w.w.EditorReplace(rng, str, true)
 	comp := key.Range{
 		Start: rng.Start,
 		End:   rng.Start + utf8.RuneCountInString(str),
@@ -736,7 +800,7 @@ func gio_insertText(view, cstr C.CFTypeRef, crng C.NSRange) {
 		}
 	}
 	str := nsstringToString(cstr)
-	w.w.EditorReplace(rng, str)
+	w.w.EditorReplace(rng, str, false)
 	w.w.SetComposingRegion(key.Range{Start: -1, End: -1})
 	start := rng.Start
 	if rng.End < start {

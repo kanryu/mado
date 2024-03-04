@@ -43,13 +43,13 @@ func setCallbacks(w *glfw.Window) {
 	w.SetCloseCallback(fCloseCallback)
 	w.SetMaximizeCallback(fMaximizeCallback)
 	w.SetContentScaleCallback(fContentScaleCallback)
-	w.SetRefreshCallback(fRefreshCallback)
+	//w.SetRefreshCallback(fRefreshCallback)
 	w.SetFocusCallback(fFocusCallback)
 	w.SetIconifyCallback(fIconifyCallback)
 
 	// input callbacks
-	//	w.SetMouseButtonCallback(fMouseButtonCallback)
-	//	w.SetCursorPosCallback(fCursorPosCallback)
+	w.SetMouseButtonCallback(fMouseButtonCallback)
+	//w.SetCursorPosCallback(fCursorPosCallback)
 	w.SetCursorEnterCallback(fCursorEnterCallback)
 	w.SetScrollCallback(fScrollCallback)
 	w.SetCharCallback(fCharCallback)
@@ -105,10 +105,10 @@ func fMouseButtonCallback(w *glfw.Window, button glfw.MouseButton, action glfw.A
 	fmt.Println("Mouse", button, action, mod)
 }
 func fCursorPosCallback(w *glfw.Window, xpos float64, ypos float64) {
-	fmt.Println("CursorPos")
+	fmt.Println("CursorPos", xpos, ypos)
 }
 func fCursorEnterCallback(w *glfw.Window, entered bool) {
-	fmt.Println("CursorEnter")
+	fmt.Println("CursorEnter", entered)
 }
 func fScrollCallback(w *glfw.Window, xoff float64, yoff float64) {
 	fmt.Println("Scroll", xoff, yoff)

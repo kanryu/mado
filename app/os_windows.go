@@ -380,6 +380,7 @@ func windowProc(hwnd syscall.Handle, msg uint32, wParam, lParam uintptr) uintptr
 	case windows.WM_SIZE:
 		x, y := coordsFromlParam(lParam)
 		w.w.Event(iowindow.SizeEvent{Size: image.Point{X: x, Y: y}})
+		w.w.Event(iowindow.FramebufferSizeEvent{Size: image.Point{X: x, Y: y}})
 		switch wParam {
 		case windows.SIZE_MINIMIZED:
 			w.config.Mode = mado.Minimized
