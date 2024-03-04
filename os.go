@@ -57,7 +57,8 @@ type WakeupEvent struct{}
 // A StageEvent is generated whenever the stage of a
 // Window changes.
 type StageEvent struct {
-	Stage Stage
+	Stage      Stage
+	WindowMode WindowMode
 }
 
 // Stage of a Window.
@@ -95,8 +96,9 @@ func (l Stage) String() string {
 type WindowMode uint8
 
 const (
+	Noop WindowMode = iota
 	// Windowed is the normal window mode with OS specific window decorations.
-	Windowed WindowMode = iota
+	Windowed
 	// Fullscreen is the full screen window mode.
 	Fullscreen
 	// Minimized is for systems where the window can be minimized to an icon.
