@@ -22,6 +22,7 @@ import (
 
 	syscall "golang.org/x/sys/unix"
 
+	"github.com/kanryu/mado"
 	"github.com/kanryu/mado/app/internal/xkb"
 	"github.com/kanryu/mado/f32"
 	"github.com/kanryu/mado/internal/fling"
@@ -137,7 +138,7 @@ type repeatState struct {
 	delay time.Duration
 
 	key   uint32
-	win   *callbacks
+	win   *mado.Callbacks
 	stopC chan struct{}
 
 	start time.Duration
@@ -147,7 +148,7 @@ type repeatState struct {
 }
 
 type window struct {
-	w          *callbacks
+	w          *mado.Callbacks
 	disp       *wlDisplay
 	seat       *wlSeat
 	surf       *C.struct_wl_surface
@@ -194,7 +195,7 @@ type window struct {
 		dir            f32.Point
 	}
 
-	stage             Stage
+	stage             mado.Stage
 	dead              bool
 	lastFrameCallback *C.struct_wl_callback
 
@@ -241,15 +242,15 @@ var callbackMap sync.Map
 var clipboardMimeTypes = []string{"text/plain;charset=utf8", "UTF8_STRING", "text/plain", "TEXT", "STRING"}
 
 var (
-	newWaylandEGLContext    func(w *window) (context, error)
-	newWaylandVulkanContext func(w *window) (context, error)
+	newWaylandEGLContext    func(w *window) (mado.Context, error)
+	newWaylandVulkanContext func(w *window) (mado.Context, error)
 )
 
 func init() {
 	wlDriver = newWLWindow
 }
 
-func newWLWindow(callbacks *callbacks, options []Option) error {
+func newWLWindow(callbacks *mado.Callbacks, options []mado.Option) error {
 	d, err := newWLDisplay()
 	if err != nil {
 		return err
@@ -327,7 +328,7 @@ func (d *wlDisplay) readClipboard() (io.ReadCloser, error) {
 	return r, nil
 }
 
-func (d *wlDisplay) createNativeWindow(options []Option) (*window, error) {
+func (d *wlDisplay) createNativeWindow(options []mado.Option) (*window, error) {
 	if d.compositor == nil {
 		return nil, errors.New("wayland: no compositor available")
 	}
@@ -586,7 +587,7 @@ func gio_onToplevelDecorationConfigure(data unsafe.Pointer, deco *C.struct_zxdg_
 		} else {
 			w.size.Y += int(w.config.decoHeight)
 		}
-		w.w.Event(ConfigEvent{Config: w.config})
+		w.w.Event(mado.ConfigEvent{Config: w.config})
 		w.redraw = true
 	}
 }
@@ -645,7 +646,7 @@ func gio_onSurfaceEnter(data unsafe.Pointer, surf *C.struct_wl_surface, output *
 	if w.config.Mode == Minimized {
 		// Minimized window got brought back up: it is no longer so.
 		w.config.Mode = Windowed
-		w.w.Event(ConfigEvent{Config: w.config})
+		w.w.Event(mado.ConfigEvent{Config: w.config})
 	}
 }
 
@@ -1041,7 +1042,7 @@ func (w *window) WriteClipboard(mime string, s []byte) {
 	w.disp.writeClipboard(s)
 }
 
-func (w *window) Configure(options []Option) {
+func (w *window) Configure(options []mado.Option) {
 	_, cfg := w.getConfig()
 	prev := w.config
 	cnf := w.config
@@ -1096,7 +1097,7 @@ func (w *window) Configure(options []Option) {
 		w.config.MaxSize = cnf.MaxSize
 		w.setWindowConstraints()
 	}
-	w.w.Event(ConfigEvent{Config: w.config})
+	w.w.Event(mado.ConfigEvent{Config: w.config})
 	w.redraw = true
 }
 
@@ -1119,7 +1120,7 @@ func (w *window) decoHeight() int {
 	return 0
 }
 
-func (w *window) setTitle(prev, cnf Config) {
+func (w *window) setTitle(prev, cnf mado.Config) {
 	if prev.Title != cnf.Title {
 		w.config.Title = cnf.Title
 		title := C.CString(cnf.Title)
@@ -1365,7 +1366,7 @@ func (w *window) loop() error {
 		case e := <-w.clipReads:
 			w.w.Event(e)
 		case <-w.wakeups:
-			w.w.Event(wakeupEvent{})
+			w.w.Event(mado.WakeupEvent{})
 		default:
 		}
 		if w.dead {
@@ -1700,7 +1701,7 @@ func (w *window) draw() {
 	}
 	if size != w.config.Size {
 		w.config.Size = size
-		w.w.Event(ConfigEvent{Config: w.config})
+		w.w.Event(mado.ConfigEvent{Config: w.config})
 	}
 	anim := w.animating || w.fling.anim.Active()
 	sync := w.redraw
@@ -1715,13 +1716,11 @@ func (w *window) draw() {
 		// Use the surface as listener data for gio_onFrameDone.
 		C.wl_callback_add_listener(w.lastFrameCallback, &C.gio_callback_listener, unsafe.Pointer(w.surf))
 	}
-	w.w.Event(frameEvent{
-		FrameEvent: FrameEvent{
-			Now:    time.Now(),
-			Size:   w.config.Size,
-			Metric: cfg,
-		},
-		Sync: sync,
+	w.w.Event(mado.FrameEvent{
+		Now:    time.Now(),
+		Size:   w.config.Size,
+		Metric: cfg,
+		Sync:   sync,
 	})
 }
 
@@ -1730,7 +1729,7 @@ func (w *window) setStage(s Stage) {
 		return
 	}
 	w.stage = s
-	w.w.Event(StageEvent{Stage: s})
+	w.w.Event(mado.StageEvent{Stage: s})
 }
 
 func (w *window) display() *C.struct_wl_display {
@@ -1746,9 +1745,9 @@ func (w *window) ShowTextInput(show bool) {}
 
 func (w *window) SetInputHint(_ key.InputHint) {}
 
-func (w *window) EditorStateChanged(old, new editorState) {}
+func (w *window) EditorStateChanged(old, new mado.EditorState) {}
 
-func (w *window) NewContext() (context, error) {
+func (w *window) NewContext() (mado.ontext, error) {
 	var firstErr error
 	if f := newWaylandEGLContext; f != nil {
 		c, err := f(w)
