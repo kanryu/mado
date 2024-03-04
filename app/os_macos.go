@@ -7,6 +7,7 @@ package app
 
 import (
 	"errors"
+	"fmt"
 	"image"
 	"io"
 	"runtime"
@@ -532,9 +533,8 @@ func gio_onKeys(view, cstr C.CFTypeRef, keyCode C.UInt16, ti C.double, mods C.NS
 //export gio_onText
 func gio_onText(view, cstr C.CFTypeRef) {
 	str := nsstringToString(cstr)
-	preedit := false
 	w := mustView(view)
-	w.w.EditorInsert(str, preedit)
+	w.w.EditorInsert(str, false)
 }
 
 //export gio_onMouse
@@ -685,6 +685,7 @@ func gio_hasMarkedText(view C.CFTypeRef) C.int {
 //export gio_markedRange
 func gio_markedRange(view C.CFTypeRef) C.NSRange {
 	w := mustView(view)
+	fmt.Println("gio_markedRange")
 	state := w.w.EditorState()
 	rng := state.Compose
 	start, end := rng.Start, rng.End
@@ -796,6 +797,7 @@ func gio_insertText(view, cstr C.CFTypeRef, crng C.NSRange) {
 		}
 	}
 	str := nsstringToString(cstr)
+	fmt.Println("gio_insertText", str)
 	w.w.EditorReplace(rng, str, false)
 	w.w.SetComposingRegion(key.Range{Start: -1, End: -1})
 	start := rng.Start

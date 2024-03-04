@@ -30,6 +30,7 @@ type Callbacks struct {
 	PrevFramebufferSize image.Point
 	PrevCursorPos       f32.Point
 	PrevModifiers       key.Modifiers
+	Preedit             string
 	WaitEvents          []event.Event
 }
 
@@ -135,9 +136,21 @@ func (c *Callbacks) Event(e event.Event) bool {
 		case pointer.CursorEnterEvent:
 			c.Gw.fCursorEnterHolder(c.Gw, e2.Entered)
 		case key.Event:
+			// IME with Preedit is confirmed by pressing Enter and POSTed as input token
+			if c.Preedit != "" && (e2.Name == key.NameReturn || e2.Name == key.NameEnter) {
+				c.Event(key.EditEvent{Text: c.Preedit})
+				break
+			}
 			c.PrevModifiers = e2.Modifiers
 			c.Gw.fKeyHolder(c.Gw, Key(e2.KeyCode), 0, Action(e2.State), ModifierKey(e2.Modifiers))
 		case key.EditEvent:
+			if e2.Preedit {
+				c.Preedit = e2.Text
+			} else {
+				// The IME returns to its initial state when the input character is confirmed, so initialize ImeState.
+				c.Preedit = ""
+				c.W.ImeState = mado.EditorState{}
+			}
 			for _, r := range e2.Text {
 				c.Gw.fCharModsHolder(c.Gw, r, ModifierKey(c.PrevModifiers))
 				if !e2.Preedit {
