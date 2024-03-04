@@ -37,6 +37,7 @@ import (
 	"time"
 	"unsafe"
 
+	"github.com/kanryu/mado"
 	"github.com/kanryu/mado/f32"
 	"github.com/kanryu/mado/io/key"
 	"github.com/kanryu/mado/io/pointer"
@@ -55,7 +56,7 @@ const (
 )
 
 type x11Window struct {
-	w            *callbacks
+	w            *mado.Callbacks
 	x            *C.Display
 	xkb          *xkb.Context
 	xkbEventBase C.int
@@ -93,7 +94,7 @@ type x11Window struct {
 		// _NET_WM_STATE_MAXIMIZED_VERT
 		wmStateMaximizedVert C.Atom
 	}
-	stage  Stage
+	stage  mado.Stage
 	metric unit.Metric
 	notify struct {
 		read, write int
@@ -108,21 +109,21 @@ type x11Window struct {
 		content []byte
 	}
 	cursor pointer.Cursor
-	config Config
+	config mado.Config
 
 	wakeups chan struct{}
 }
 
 var (
-	newX11EGLContext    func(w *x11Window) (context, error)
-	newX11VulkanContext func(w *x11Window) (context, error)
+	newX11EGLContext    func(w *x11Window) (mado.Context, error)
+	newX11VulkanContext func(w *x11Window) (mado.Context, error)
 )
 
 // X11 and Vulkan doesn't work reliably on NVIDIA systems.
 // See https://github.com/kanryu/mado/issue/347.
 const vulkanBuggy = true
 
-func (w *x11Window) NewContext() (context, error) {
+func (w *x11Window) NewContext() (mado.Context, error) {
 	var firstErr error
 	if f := newX11VulkanContext; f != nil && !vulkanBuggy {
 		c, err := f(w)
@@ -159,55 +160,55 @@ func (w *x11Window) WriteClipboard(mime string, s []byte) {
 	C.XSetSelectionOwner(w.x, w.atoms.primary, w.xw, C.CurrentTime)
 }
 
-func (w *x11Window) Configure(options []Option) {
+func (w *x11Window) Configure(options []mado.Option) {
 	var shints C.XSizeHints
 	prev := w.config
 	cnf := w.config
-	cnf.apply(w.metric, options)
+	cnf.Apply(w.metric, options)
 	// Decorations are never disabled.
 	cnf.Decorated = true
 
 	switch cnf.Mode {
-	case Fullscreen:
+	case mado.Fullscreen:
 		switch prev.Mode {
-		case Fullscreen:
-		case Minimized:
+		case mado.Fullscreen:
+		case mado.Minimized:
 			w.raise()
 			fallthrough
 		default:
-			w.config.Mode = Fullscreen
+			w.config.Mode = mado.Fullscreen
 			w.sendWMStateEvent(_NET_WM_STATE_ADD, w.atoms.wmStateFullscreen, 0)
 		}
-	case Minimized:
+	case mado.Minimized:
 		switch prev.Mode {
-		case Minimized, Fullscreen:
+		case mado.Minimized, mado.Fullscreen:
 		default:
-			w.config.Mode = Minimized
+			w.config.Mode = mado.Minimized
 			screen := C.XDefaultScreen(w.x)
 			C.XIconifyWindow(w.x, w.xw, screen)
 		}
-	case Maximized:
+	case mado.Maximized:
 		switch prev.Mode {
-		case Fullscreen:
-		case Minimized:
+		case mado.Fullscreen:
+		case mado.Minimized:
 			w.raise()
 			fallthrough
 		default:
-			w.config.Mode = Maximized
+			w.config.Mode = mado.Maximized
 			w.sendWMStateEvent(_NET_WM_STATE_ADD, w.atoms.wmStateMaximizedHorz, w.atoms.wmStateMaximizedVert)
 			w.setTitle(prev, cnf)
 		}
-	case Windowed:
+	case mado.Windowed:
 		switch prev.Mode {
-		case Fullscreen:
-			w.config.Mode = Windowed
+		case mado.Fullscreen:
+			w.config.Mode = mado.Windowed
 			w.sendWMStateEvent(_NET_WM_STATE_REMOVE, w.atoms.wmStateFullscreen, 0)
 			C.XResizeWindow(w.x, w.xw, C.uint(cnf.Size.X), C.uint(cnf.Size.Y))
-		case Minimized:
-			w.config.Mode = Windowed
+		case mado.Minimized:
+			w.config.Mode = mado.Windowed
 			w.raise()
-		case Maximized:
-			w.config.Mode = Windowed
+		case mado.Maximized:
+			w.config.Mode = mado.Windowed
 			w.sendWMStateEvent(_NET_WM_STATE_REMOVE, w.atoms.wmStateMaximizedHorz, w.atoms.wmStateMaximizedVert)
 		}
 		w.setTitle(prev, cnf)
@@ -234,10 +235,10 @@ func (w *x11Window) Configure(options []Option) {
 	if cnf.Decorated != prev.Decorated {
 		w.config.Decorated = cnf.Decorated
 	}
-	w.w.Event(ConfigEvent{Config: w.config})
+	w.w.Event(mado.ConfigEvent{Config: w.config})
 }
 
-func (w *x11Window) setTitle(prev, cnf Config) {
+func (w *x11Window) setTitle(prev, cnf mado.Config) {
 	if prev.Title != cnf.Title {
 		title := cnf.Title
 		ctitle := C.CString(title)
@@ -256,7 +257,7 @@ func (w *x11Window) setTitle(prev, cnf Config) {
 }
 
 func (w *x11Window) Perform(acts system.Action) {
-	walkActions(acts, func(a system.Action) {
+	mado.WalkActions(acts, func(a system.Action) {
 		switch a {
 		case system.ActionCenter:
 			w.center()
@@ -330,7 +331,7 @@ func (w *x11Window) ShowTextInput(show bool) {}
 
 func (w *x11Window) SetInputHint(_ key.InputHint) {}
 
-func (w *x11Window) EditorStateChanged(old, new editorState) {}
+func (w *x11Window) EditorStateChanged(old, new mado.EditorState) {}
 
 // close the window.
 func (w *x11Window) close() {
@@ -395,12 +396,12 @@ func (w *x11Window) window() (C.Window, int, int) {
 	return w.xw, w.config.Size.X, w.config.Size.Y
 }
 
-func (w *x11Window) setStage(s Stage) {
+func (w *x11Window) setStage(s mado.Stage) {
 	if s == w.stage {
 		return
 	}
 	w.stage = s
-	w.w.Event(StageEvent{Stage: s})
+	w.w.Event(mado.StageEvent{Stage: s})
 }
 
 func (w *x11Window) loop() {
@@ -454,18 +455,16 @@ loop:
 		}
 		select {
 		case <-w.wakeups:
-			w.w.Event(wakeupEvent{})
+			w.w.Event(mado.WakeupEvent{})
 		default:
 		}
 
 		if (anim || syn) && w.config.Size.X != 0 && w.config.Size.Y != 0 {
-			w.w.Event(frameEvent{
-				FrameEvent: FrameEvent{
-					Now:    time.Now(),
-					Size:   w.config.Size,
-					Metric: w.metric,
-				},
-				Sync: syn,
+			w.w.Event(mado.FrameEvent{
+				Now:    time.Now(),
+				Size:   w.config.Size,
+				Metric: w.metric,
+				Sync:   syn,
 			})
 		}
 	}
@@ -630,7 +629,7 @@ func (h *x11EventHandler) handleEvents() bool {
 			cevt := (*C.XConfigureEvent)(unsafe.Pointer(xev))
 			if sz := image.Pt(int(cevt.width), int(cevt.height)); sz != w.config.Size {
 				w.config.Size = sz
-				w.w.Event(ConfigEvent{Config: w.config})
+				w.w.Event(mado.ConfigEvent{Config: w.config})
 			}
 			// redraw will be done by a later expose event
 		case C.SelectionNotify:
@@ -727,7 +726,7 @@ func init() {
 	x11Driver = newX11Window
 }
 
-func newX11Window(gioWin *callbacks, options []Option) error {
+func newX11Window(gioWin *mado.Callbacks, options []mado.Option) error {
 	var err error
 
 	pipe := make([]int, 2)
@@ -768,8 +767,8 @@ func newX11Window(gioWin *callbacks, options []Option) error {
 	ppsp := x11DetectUIScale(dpy)
 	cfg := unit.Metric{PxPerDp: ppsp, PxPerSp: ppsp}
 	// Only use cnf for getting the window size.
-	var cnf Config
-	cnf.apply(cfg, options)
+	var cnf mado.Config
+	cnf.Apply(cfg, options)
 
 	swa := C.XSetWindowAttributes{
 		event_mask: C.ExposureMask | C.FocusChangeMask | // update
@@ -791,7 +790,7 @@ func newX11Window(gioWin *callbacks, options []Option) error {
 		xkb:          xkb,
 		xkbEventBase: xkbEventBase,
 		wakeups:      make(chan struct{}, 1),
-		config:       Config{Size: cnf.Size},
+		config:       mado.Config{Size: cnf.Size},
 	}
 	w.notify.read = pipe[0]
 	w.notify.write = pipe[1]
@@ -837,7 +836,7 @@ func newX11Window(gioWin *callbacks, options []Option) error {
 		C.XMapWindow(dpy, win)
 		w.Configure(options)
 		w.w.Event(X11ViewEvent{Display: unsafe.Pointer(dpy), Window: uintptr(win)})
-		w.setStage(StageRunning)
+		w.setStage(mado.StageRunning)
 		w.loop()
 		w.w.Event(X11ViewEvent{})
 		w.w.Event(DestroyEvent{Err: nil})
