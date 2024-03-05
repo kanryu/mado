@@ -17,6 +17,7 @@ bool withPollEvents = false;
 @interface GioWindowDelegate : NSObject<NSWindowDelegate> {
 	NSSize windowSize;
 	NSSize fbSize;
+	int maximized;
 }
 @end
 
@@ -77,6 +78,12 @@ bool withPollEvents = false;
 {
 	NSWindow *window = (NSWindow *)[notification object];
 	@autoreleasepool {
+		const int _maximized = [window isZoomed];
+		if (_maximized != maximized)
+		{
+			maximized = _maximized;
+			gio_onWindowMaximize((__bridge CFTypeRef)window.contentView, _maximized);
+		}
 		const NSRect contentRect =
 			[window contentRectForFrameRect:[window frame]];
 	    const NSRect fbRect = [window convertRectToBacking:contentRect];
