@@ -11,6 +11,7 @@ import (
 	"errors"
 	"unsafe"
 
+	"github.com/kanryu/mado"
 	"github.com/kanryu/mado/internal/egl"
 )
 
@@ -32,7 +33,7 @@ type wlContext struct {
 }
 
 func init() {
-	newWaylandEGLContext = func(w *window) (context, error) {
+	newWaylandEGLContext = func(w *window) (mado.Context, error) {
 		disp := egl.NativeDisplayType(unsafe.Pointer(w.display()))
 		ctx, err := egl.NewContext(disp)
 		if err != nil {

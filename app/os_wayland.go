@@ -278,7 +278,7 @@ func newWLWindow(callbacks mado.Callbacks, options []mado.Option) error {
 
 		err := w.loop()
 		w.w.Event(WaylandViewEvent{})
-		w.w.Event(DestroyEvent{Err: err})
+		w.w.Event(mado.DestroyEvent{Err: err})
 	}()
 	return nil
 }
@@ -552,7 +552,7 @@ func gio_onXdgSurfaceConfigure(data unsafe.Pointer, wmSurf *C.struct_xdg_surface
 	w.serial = serial
 	w.redraw = true
 	C.xdg_surface_ack_configure(wmSurf, serial)
-	w.setStage(StageRunning)
+	w.setStage(mado.StageRunning)
 }
 
 //export gio_onToplevelClose
@@ -583,9 +583,9 @@ func gio_onToplevelDecorationConfigure(data unsafe.Pointer, deco *C.struct_zxdg_
 	if decorated != w.config.Decorated {
 		w.setWindowConstraints()
 		if w.config.Decorated {
-			w.size.Y -= int(w.config.decoHeight)
+			w.size.Y -= int(w.config.DecoHeight)
 		} else {
-			w.size.Y += int(w.config.decoHeight)
+			w.size.Y += int(w.config.DecoHeight)
 		}
 		w.w.Event(mado.ConfigEvent{Config: w.config})
 		w.redraw = true
@@ -643,9 +643,9 @@ func gio_onSurfaceEnter(data unsafe.Pointer, surf *C.struct_wl_surface, output *
 		conf.windows = append(conf.windows, w)
 	}
 	w.updateOutputs()
-	if w.config.Mode == Minimized {
+	if w.config.Mode == mado.Minimized {
 		// Minimized window got brought back up: it is no longer so.
-		w.config.Mode = Windowed
+		w.config.Mode = mado.Windowed
 		w.w.Event(mado.ConfigEvent{Config: w.config})
 	}
 }
@@ -1046,8 +1046,8 @@ func (w *window) Configure(options []mado.Option) {
 	_, cfg := w.getConfig()
 	prev := w.config
 	cnf := w.config
-	cnf.apply(cfg, options)
-	w.config.decoHeight = cnf.decoHeight
+	cnf.Apply(cfg, options)
+	w.config.DecoHeight = cnf.DecoHeight
 
 	switch cnf.Mode {
 	case Fullscreen:
