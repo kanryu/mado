@@ -89,9 +89,6 @@ func (c *Callbacks) Event(e event.Event) bool {
 					c.PrevWindowMode = mado.Fullscreen
 				}
 				if e2.WindowMode == mado.Windowed {
-					if c.PrevWindowStage == mado.StageInactive {
-						c.Gw.fFocusHolder(c.Gw, true)
-					}
 					if c.PrevWindowMode == mado.Minimized {
 						c.Gw.fIconifyHolder(c.Gw, false)
 					} else if c.PrevWindowMode == mado.Maximized {
@@ -104,9 +101,10 @@ func (c *Callbacks) Event(e event.Event) bool {
 					c.PrevWindowMode = mado.Windowed
 				}
 			case mado.StageInactive:
-				c.Gw.fFocusHolder(c.Gw, false)
 				c.PrevWindowStage = mado.StageInactive
 			}
+		case key.FocusEvent:
+			c.Gw.fFocusHolder(c.Gw, e2.Focus)
 		case window.FrameScaleEvent:
 			if c.PrevScaling != e2.Scaling {
 				c.PrevScaling = e2.Scaling
