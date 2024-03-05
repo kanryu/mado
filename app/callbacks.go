@@ -21,6 +21,10 @@ type Callbacks struct {
 	waitEvents []event.Event
 }
 
+func (c *Callbacks) GetWindow() mado.Window {
+	return c.w
+}
+
 func (c *Callbacks) SetWindow(w mado.Window) {
 	c.w = w.(*Window)
 }

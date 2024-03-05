@@ -40,8 +40,25 @@ type WaylandViewEvent struct {
 func (WaylandViewEvent) implementsViewEvent() {}
 func (WaylandViewEvent) ImplementsEvent()     {}
 
+var withPollEvents bool
+
 func osMain() {
 	select {}
+}
+
+func EnablePollEvents() {
+	withPollEvents = true
+}
+
+// PollEvents In the Windows implementation,
+// each Window has own event loop goroutine,
+// so there is no need to process events here.
+func PollEvents() {
+	// msg := windows.Msg{}
+	// for windows.PeekMessage(&msg, 0, 0, 0, windows.PM_REMOVE) {
+	// 	windows.TranslateMessage(&msg)
+	// 	windows.DispatchMessage(&msg)
+	// }
 }
 
 type windowDriver func(mado.Callbacks, []mado.Option) error

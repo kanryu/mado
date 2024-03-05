@@ -910,7 +910,7 @@ func gio_onPointerButton(data unsafe.Pointer, p *C.struct_wl_pointer, serial, t,
 			return
 		}
 		act, ok := w.w.ActionAt(w.lastPos)
-		if ok && w.config.Mode == Windowed {
+		if ok && w.config.Mode == mado.Windowed {
 			switch act {
 			case system.ActionMove:
 				w.move(serial)
@@ -1050,40 +1050,40 @@ func (w *window) Configure(options []mado.Option) {
 	w.config.DecoHeight = cnf.DecoHeight
 
 	switch cnf.Mode {
-	case Fullscreen:
+	case mado.Fullscreen:
 		switch prev.Mode {
-		case Minimized, Fullscreen:
+		case mado.Minimized, mado.Fullscreen:
 		default:
-			w.config.Mode = Fullscreen
+			w.config.Mode = mado.Fullscreen
 			w.wsize = w.config.Size
 			C.xdg_toplevel_set_fullscreen(w.topLvl, nil)
 		}
-	case Minimized:
+	case mado.Minimized:
 		switch prev.Mode {
-		case Minimized, Fullscreen:
+		case mado.Minimized, mado.Fullscreen:
 		default:
-			w.config.Mode = Minimized
+			w.config.Mode = mado.Minimized
 			C.xdg_toplevel_set_minimized(w.topLvl)
 		}
-	case Maximized:
+	case mado.Maximized:
 		switch prev.Mode {
-		case Minimized, Fullscreen:
+		case mado.Minimized, mado.Fullscreen:
 		default:
-			w.config.Mode = Maximized
+			w.config.Mode = mado.Maximized
 			w.wsize = w.config.Size
 			C.xdg_toplevel_set_maximized(w.topLvl)
 			w.setTitle(prev, cnf)
 		}
-	case Windowed:
+	case mado.Windowed:
 		switch prev.Mode {
-		case Fullscreen:
-			w.config.Mode = Windowed
+		case mado.Fullscreen:
+			w.config.Mode = mado.Windowed
 			w.size = w.wsize.Div(w.scale)
 			C.xdg_toplevel_unset_fullscreen(w.topLvl)
-		case Minimized:
-			w.config.Mode = Windowed
-		case Maximized:
-			w.config.Mode = Windowed
+		case mado.Minimized:
+			w.config.Mode = mado.Windowed
+		case mado.Maximized:
+			w.config.Mode = mado.Windowed
 			w.size = w.wsize.Div(w.scale)
 			C.xdg_toplevel_unset_maximized(w.topLvl)
 		}
@@ -1115,7 +1115,7 @@ func (w *window) setWindowConstraints() {
 // The unit is in surface-local coordinates.
 func (w *window) decoHeight() int {
 	if !w.config.Decorated {
-		return int(w.config.decoHeight)
+		return int(w.config.DecoHeight)
 	}
 	return 0
 }
@@ -1132,7 +1132,7 @@ func (w *window) setTitle(prev, cnf mado.Config) {
 func (w *window) Perform(actions system.Action) {
 	// NB. there is no way for a minimized window to be unminimized.
 	// https://wayland.app/protocols/xdg-shell#xdg_toplevel:request:set_minimized
-	walkActions(actions, func(action system.Action) {
+	mado.WalkActions(actions, func(action system.Action) {
 		switch action {
 		case system.ActionClose:
 			w.dead = true
@@ -1243,7 +1243,7 @@ func gio_onKeyboardKey(data unsafe.Pointer, keyboard *C.struct_wl_keyboard, seri
 	for _, e := range w.disp.xkb.DispatchKey(kc, ks) {
 		if ee, ok := e.(key.EditEvent); ok {
 			// There's no support for IME yet.
-			w.w.EditorInsert(ee.Text)
+			w.w.EditorInsert(ee.Text, false)
 		} else {
 			w.w.Event(e)
 		}
@@ -1338,7 +1338,7 @@ func (r *repeatState) Repeat(d *wlDisplay) {
 		for _, e := range d.xkb.DispatchKey(r.key, key.Press) {
 			if ee, ok := e.(key.EditEvent); ok {
 				// There's no support for IME yet.
-				r.win.EditorInsert(ee.Text)
+				r.win.EditorInsert(ee.Text, false)
 			} else {
 				r.win.Event(e)
 			}
@@ -1618,10 +1618,10 @@ func (w *window) onPointerMotion(x, y C.wl_fixed_t, t C.uint32_t) {
 // updateCursor updates the system gesture cursor according to the pointer
 // position.
 func (w *window) systemGesture() (*C.struct_wl_cursor, C.uint32_t) {
-	if w.config.Mode != Windowed || w.config.Decorated {
+	if w.config.Mode != mado.Windowed || w.config.Decorated {
 		return nil, 0
 	}
-	border := w.w.w.metric.Dp(3)
+	border := w.w.GetWindow().(*Window).Metric.Dp(3)
 	x, y, size := int(w.lastPos.X), int(w.lastPos.Y), w.config.Size
 	north := y <= border
 	south := y >= size.Y-border
@@ -1678,9 +1678,9 @@ func (w *window) updateOutputs() {
 		w.redraw = true
 	}
 	if !found {
-		w.setStage(StagePaused)
+		w.setStage(mado.StagePaused)
 	} else {
-		w.setStage(StageRunning)
+		w.setStage(mado.StageRunning)
 		w.redraw = true
 	}
 }

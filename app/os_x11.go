@@ -540,7 +540,7 @@ func (h *x11EventHandler) handleEvents() bool {
 			for _, e := range h.w.xkb.DispatchKey(uint32(kevt.keycode), ks) {
 				if ee, ok := e.(key.EditEvent); ok {
 					// There's no support for IME yet.
-					w.w.EditorInsert(ee.Text)
+					w.w.EditorInsert(ee.Text, false)
 				} else {
 					w.w.Event(e)
 				}
@@ -839,7 +839,7 @@ func newX11Window(gioWin mado.Callbacks, options []mado.Option) error {
 		w.setStage(mado.StageRunning)
 		w.loop()
 		w.w.Event(X11ViewEvent{})
-		w.w.Event(DestroyEvent{Err: nil})
+		w.w.Event(mado.DestroyEvent{Err: nil})
 		w.destroy()
 	}()
 	return nil

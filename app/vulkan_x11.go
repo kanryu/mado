@@ -10,6 +10,7 @@ package app
 import (
 	"unsafe"
 
+	"github.com/kanryu/mado"
 	"github.com/kanryu/mado/gpu"
 	"github.com/kanryu/mado/internal/vk"
 )
@@ -22,7 +23,7 @@ type x11VkContext struct {
 }
 
 func init() {
-	newX11VulkanContext = func(w *x11Window) (context, error) {
+	newX11VulkanContext = func(w *x11Window) (mado.Context, error) {
 		inst, err := vk.CreateInstance("VK_KHR_surface", "VK_KHR_xlib_surface")
 		if err != nil {
 			return nil, err

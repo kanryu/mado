@@ -127,6 +127,7 @@ func (e *EditorState) RunesIndex(chars int) int {
 }
 
 type Callbacks interface {
+	GetWindow() Window
 	SetWindow(w Window)
 	SetDriver(d Driver)
 	Event(e event.Event) bool

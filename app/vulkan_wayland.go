@@ -10,6 +10,7 @@ package app
 import (
 	"unsafe"
 
+	"github.com/kanryu/mado"
 	"github.com/kanryu/mado/gpu"
 	"github.com/kanryu/mado/internal/vk"
 )
@@ -22,7 +23,7 @@ type wlVkContext struct {
 }
 
 func init() {
-	newWaylandVulkanContext = func(w *window) (context, error) {
+	newWaylandVulkanContext = func(w *window) (mado.Context, error) {
 		inst, err := vk.CreateInstance("VK_KHR_surface", "VK_KHR_wayland_surface")
 		if err != nil {
 			return nil, err
