@@ -43,7 +43,9 @@ func (WaylandViewEvent) ImplementsEvent()     {}
 var withPollEvents bool
 
 func osMain() {
-	select {}
+	if !withPollEvents {
+		select {}
+	}
 }
 
 func EnablePollEvents() {

@@ -43,6 +43,7 @@ import (
 	"github.com/kanryu/mado/io/pointer"
 	"github.com/kanryu/mado/io/system"
 	"github.com/kanryu/mado/io/transfer"
+	iowindow "github.com/kanryu/mado/io/window"
 	"github.com/kanryu/mado/unit"
 
 	syscall "golang.org/x/sys/unix"
@@ -110,6 +111,8 @@ type x11Window struct {
 	}
 	cursor pointer.Cursor
 	config mado.Config
+
+	prevWindowPos image.Point
 
 	wakeups chan struct{}
 }
@@ -628,8 +631,13 @@ func (h *x11EventHandler) handleEvents() bool {
 		case C.ConfigureNotify: // window configuration change
 			cevt := (*C.XConfigureEvent)(unsafe.Pointer(xev))
 			if sz := image.Pt(int(cevt.width), int(cevt.height)); sz != w.config.Size {
+				w.w.Event(iowindow.SizeEvent{Size: sz})
 				w.config.Size = sz
 				w.w.Event(mado.ConfigEvent{Config: w.config})
+			}
+			if pos := image.Pt(int(cevt.x), int(cevt.y)); pos != w.prevWindowPos {
+				w.prevWindowPos = pos
+				w.w.Event(iowindow.MoveEvent{Pos: pos})
 			}
 			// redraw will be done by a later expose event
 		case C.SelectionNotify:
