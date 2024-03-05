@@ -138,7 +138,7 @@ type repeatState struct {
 	delay time.Duration
 
 	key   uint32
-	win   *mado.Callbacks
+	win   mado.Callbacks
 	stopC chan struct{}
 
 	start time.Duration
@@ -148,7 +148,7 @@ type repeatState struct {
 }
 
 type window struct {
-	w          *mado.Callbacks
+	w          mado.Callbacks
 	disp       *wlDisplay
 	seat       *wlSeat
 	surf       *C.struct_wl_surface
@@ -206,7 +206,7 @@ type window struct {
 	scale  int
 	// size is the unscaled window size (unlike config.Size which is scaled).
 	size         image.Point
-	config       Config
+	config       mado.Config
 	wsize        image.Point // window config size before going fullscreen or maximized
 	inCompositor bool        // window is moving or being resized
 
@@ -250,7 +250,7 @@ func init() {
 	wlDriver = newWLWindow
 }
 
-func newWLWindow(callbacks *mado.Callbacks, options []mado.Option) error {
+func newWLWindow(callbacks mado.Callbacks, options []mado.Option) error {
 	d, err := newWLDisplay()
 	if err != nil {
 		return err
@@ -1724,7 +1724,7 @@ func (w *window) draw() {
 	})
 }
 
-func (w *window) setStage(s Stage) {
+func (w *window) setStage(s mado.Stage) {
 	if s == w.stage {
 		return
 	}
@@ -1747,7 +1747,7 @@ func (w *window) SetInputHint(_ key.InputHint) {}
 
 func (w *window) EditorStateChanged(old, new mado.EditorState) {}
 
-func (w *window) NewContext() (mado.ontext, error) {
+func (w *window) NewContext() (mado.Context, error) {
 	var firstErr error
 	if f := newWaylandEGLContext; f != nil {
 		c, err := f(w)

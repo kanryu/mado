@@ -44,13 +44,13 @@ func osMain() {
 	select {}
 }
 
-type windowDriver func(*mado.Callbacks, []mado.Option) error
+type windowDriver func(mado.Callbacks, []mado.Option) error
 
 // Instead of creating files with build tags for each combination of wayland +/- x11
 // let each driver initialize these variables with their own version of createWindow.
 var wlDriver, x11Driver windowDriver
 
-func newWindow(window *mado.Callbacks, options []mado.Option) error {
+func newWindow(window mado.Callbacks, options []mado.Option) error {
 	var errFirst error
 	for _, d := range []windowDriver{wlDriver, x11Driver} {
 		if d == nil {

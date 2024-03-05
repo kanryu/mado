@@ -10,6 +10,7 @@ package app
 import (
 	"unsafe"
 
+	"github.com/kanryu/mado"
 	"github.com/kanryu/mado/internal/egl"
 )
 
@@ -19,7 +20,7 @@ type x11Context struct {
 }
 
 func init() {
-	newX11EGLContext = func(w *x11Window) (context, error) {
+	newX11EGLContext = func(w *x11Window) (mado.Context, error) {
 		disp := egl.NativeDisplayType(unsafe.Pointer(w.display()))
 		ctx, err := egl.NewContext(disp)
 		if err != nil {

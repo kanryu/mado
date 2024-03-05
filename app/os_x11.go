@@ -56,7 +56,7 @@ const (
 )
 
 type x11Window struct {
-	w            *mado.Callbacks
+	w            mado.Callbacks
 	x            *C.Display
 	xkb          *xkb.Context
 	xkbEventBase C.int
@@ -726,7 +726,7 @@ func init() {
 	x11Driver = newX11Window
 }
 
-func newX11Window(gioWin *mado.Callbacks, options []mado.Option) error {
+func newX11Window(gioWin mado.Callbacks, options []mado.Option) error {
 	var err error
 
 	pipe := make([]int, 2)
