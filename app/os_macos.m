@@ -3,6 +3,7 @@
 // +build darwin,!ios
 
 #import <AppKit/AppKit.h>
+#import <mach/mach_time.h>
 
 #include "_cgo_export.h"
 
@@ -492,6 +493,21 @@ CFTypeRef gio_createView(void) {
 	}
 }
 
+void gio_getFramebufferSize(CFTypeRef viewRef, int* width, int* height)
+{
+    @autoreleasepool {
+		NSView *view = (__bridge NSView *)viewRef;
+		const NSRect contentRect = [view frame];
+		const NSRect fbRect = [view convertRectToBacking:contentRect];
+
+		if (width)
+			*width = (int) fbRect.size.width;
+		if (height)
+			*height = (int) fbRect.size.height;
+
+    } // autoreleasepool
+}
+
 @implementation GioAppDelegate
 - (void)applicationDidFinishLaunching:(NSNotification *)aNotification {
 	[NSApp setActivationPolicy:NSApplicationActivationPolicyRegular];
@@ -509,7 +525,24 @@ CFTypeRef gio_createView(void) {
 }
 @end
 
+
+uint64_t frequency;
+
+void gio_initTimerNS(void)
+{
+    mach_timebase_info_data_t info;
+    mach_timebase_info(&info);
+
+    frequency = (info.denom * 1e9) / info.numer;
+}
+
+uint64 gio_getTimeFrequency(void)
+{
+    return frequency;
+}
+
 void gio_main() {
+	gio_initTimerNS();
 	@autoreleasepool {
 		[NSApplication sharedApplication];
 		GioAppDelegate *del = [[GioAppDelegate alloc] init];
@@ -540,6 +573,11 @@ void gio_main() {
 void gio_enablePollEvents(void)
 {
 	withPollEvents = true;
+}
+
+bool gio_isEnablePollEvents(void)
+{
+	return withPollEvents;
 }
 
 void gio_PollEvents(void)

@@ -11,9 +11,12 @@ import (
 // But since we're using receievers, DetachCurrentContext should
 // be used instead.
 func (w *Window) MakeContextCurrent() {
-	// go func() {
-	// 	runtime.LockOSThread()
-	// }()
+	PollEvents()
+	if ctx, err := w.callbacks.D.NewContext(); err != nil {
+		panic(err)
+	} else {
+		w.ctx = ctx
+	}
 	panicError()
 }
 
@@ -33,10 +36,9 @@ func GetCurrentContext() *Window {
 // swap interval is greater than zero, the GPU driver waits the specified number
 // of screen updates before swapping the buffers.
 func (w *Window) SwapBuffers() {
+	w.ctx.SwapBuffers()
 	t := time.NewTicker(1000 / 60 * time.Millisecond)
-	select {
-	case <-t.C:
-	}
+	<-t.C
 	panicError()
 }
 

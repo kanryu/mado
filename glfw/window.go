@@ -165,6 +165,7 @@ type Window struct {
 	data      *app.Window
 	callbacks *Callbacks
 	pointer   unsafe.Pointer
+	ctx       mado.Context
 
 	shouldClose bool
 
@@ -242,6 +243,7 @@ type Window struct {
 // This function may only be called from the main thread.
 func CreateWindow(width, height int, title string, monitor *Monitor, share *Window) (*Window, error) {
 	options := []mado.Option{
+		app.CustomRenderer(true),
 		app.Size(unit.Dp(width), unit.Dp(height)),
 		app.Title(title),
 	}
@@ -421,9 +423,9 @@ func (w *Window) SetAspectRatio(numer, denom int) {
 // GetFramebufferSize retrieves the size, in pixels, of the framebuffer of the
 // specified window.
 func (w *Window) GetFramebufferSize() (width, height int) {
-	fmt.Println("not implemented")
+	size := w.callbacks.D.GetFrameBufferSize()
 	panicError()
-	return 800, 600
+	return size.X, size.Y
 }
 
 // GetFrameSize retrieves the size, in screen coordinates, of each edge of the frame

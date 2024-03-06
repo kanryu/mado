@@ -57,6 +57,7 @@ func (a *Application) appendWindow(w *Window) {
 		defer a.Active.Done()
 		a.run(w)
 	}()
+	PollEvents()
 }
 
 func (a *Application) run(w *Window) {
@@ -269,4 +270,18 @@ func GetClipboardString() string {
 func SetClipboardString(str string) {
 	fmt.Println("not implemented")
 	panicError()
+}
+
+// GetTime returns the value of the GLFW timer. Unless the timer has been set
+// using SetTime, the timer measures time elapsed since GLFW was initialized.
+//
+// The resolution of the timer is system dependent, but is usually on the order
+// of a few micro- or nanoseconds. It uses the highest-resolution monotonic time
+// source on each supported platform.
+func GetTime() float64 {
+	tm := app.GetTimeValue()
+	freq := app.GetTimeFrequency()
+	ret := float64(tm) / float64(freq)
+	panicError()
+	return ret
 }

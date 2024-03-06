@@ -33,6 +33,7 @@ func main() {
 		window.SwapBuffers()
 		glfw.PollEvents()
 	}
+	fmt.Println("main finished.")
 }
 
 func setCallbacks(w *glfw.Window) {

@@ -175,6 +175,7 @@ type Context interface {
 	Release()
 	Lock() error
 	Unlock()
+	SwapBuffers()
 }
 
 // Driver is the interface for the platform implementation
@@ -201,6 +202,7 @@ type Driver interface {
 	Perform(system.Action)
 	// EditorStateChanged notifies the driver that the editor state changed.
 	EditorStateChanged(old, new EditorState)
+	GetFrameBufferSize() image.Point
 }
 
 // Make it possible to update the options into Callbacks

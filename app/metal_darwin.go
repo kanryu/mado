@@ -7,6 +7,7 @@ package app
 
 import (
 	"errors"
+	"fmt"
 
 	"github.com/kanryu/mado"
 	"github.com/kanryu/mado/gpu"
@@ -74,6 +75,8 @@ static CFTypeRef newCommandQueue(CFTypeRef devRef) {
 }
 */
 import "C"
+
+var _ mado.Context = (*mtlContext)(nil)
 
 type mtlContext struct {
 	dev      C.CFTypeRef
@@ -167,6 +170,10 @@ func (c *mtlContext) Unlock() {}
 func (c *mtlContext) Refresh() error {
 	resizeDrawable(c.view, c.layer)
 	return nil
+}
+
+func (c *mtlContext) SwapBuffers() {
+	fmt.Println("not implemented")
 }
 
 func (w *window) NewContext() (mado.Context, error) {

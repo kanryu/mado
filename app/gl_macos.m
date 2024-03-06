@@ -31,6 +31,25 @@ CFTypeRef gio_createGLContext(void) {
 	}
 }
 
+CFTypeRef gio_createGLContext2(NSOpenGLPixelFormatAttribute *attribs) {
+	@autoreleasepool {
+		NSOpenGLPixelFormat *pixFormat = [[NSOpenGLPixelFormat alloc] initWithAttributes:attribs];
+
+		NSOpenGLContext *ctx = [[NSOpenGLContext alloc] initWithFormat:pixFormat shareContext: nil];
+		return CFBridgingRetain(ctx);
+	}
+}
+
+void gio_swapBuffers(CFTypeRef ctxRef)
+{
+    @autoreleasepool {
+
+	NSOpenGLContext *ctx = (__bridge NSOpenGLContext *)ctxRef;
+    [ctx flushBuffer];
+
+    } // autoreleasepool
+}
+
 void gio_setContextView(CFTypeRef ctxRef, CFTypeRef viewRef) {
 	NSOpenGLContext *ctx = (__bridge NSOpenGLContext *)ctxRef;
 	NSView *view = (__bridge NSView *)viewRef;

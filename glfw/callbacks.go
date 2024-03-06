@@ -1,6 +1,7 @@
 package glfw
 
 import (
+	"fmt"
 	"image"
 	"time"
 	"unicode/utf8"
@@ -47,6 +48,7 @@ func (c *Callbacks) SetGlfwWindow(gw *Window) {
 }
 
 func (c *Callbacks) SetDriver(d mado.Driver) {
+	fmt.Println("SetDriver")
 	c.D = d
 	var wakeup func()
 	if d != nil {
@@ -126,6 +128,8 @@ func (c *Callbacks) Event(e event.Event) bool {
 			}
 		case window.CloseEvent:
 			c.Gw.fCloseHolder(c.Gw)
+			//c.Gw.shouldClose = true
+			c.Event(mado.DestroyEvent{})
 		case pointer.Event:
 			if e2.Kind == pointer.Scroll {
 				c.Gw.fScrollHolder(c.Gw, float64(e2.Scroll.X), float64(e2.Scroll.Y))

@@ -40,6 +40,10 @@ import (
 #define MOUSE_DOWN 3
 #define MOUSE_SCROLL 4
 
+__attribute__ ((visibility ("hidden"))) void gio_getFramebufferSize(CFTypeRef viewRef, int* width, int* height);
+__attribute__ ((visibility ("hidden"))) bool gio_isEnablePollEvents(void);
+__attribute__ ((visibility ("hidden"))) uint64_t gio_getTimeFrequency(void);
+__attribute__ ((visibility ("hidden"))) uint64_t mach_absolute_time(void);
 __attribute__ ((visibility ("hidden"))) void gio_main(void);
 __attribute__ ((visibility ("hidden"))) void gio_enablePollEvents(void);
 __attribute__ ((visibility ("hidden"))) void gio_PollEvents(void);
@@ -258,6 +262,8 @@ type ViewEvent struct {
 	// Layer is a CFTypeRef of the CALayer of View.
 	Layer uintptr
 }
+
+var _ mado.Driver = (*window)(nil)
 
 type window struct {
 	view        C.CFTypeRef
@@ -865,6 +871,13 @@ func (w *window) draw() {
 	})
 }
 
+func (w *window) GetFrameBufferSize() image.Point {
+	var width C.int
+	var height C.int
+	C.gio_getFramebufferSize(w.view, &width, &height)
+	return image.Pt(int(width), int(height))
+}
+
 func configFor(scale float32) unit.Metric {
 	return unit.Metric{
 		PxPerDp: scale,
@@ -1001,6 +1014,20 @@ func PollEvents() {
 	C.gio_PollEvents()
 }
 
+func IsEnablePollEvents() bool {
+	return bool(C.gio_isEnablePollEvents())
+}
+
+func GetTimeValue() uint64 {
+	tm := C.mach_absolute_time()
+	return uint64(tm)
+}
+
+func GetTimeFrequency() uint64 {
+	frequency := C.gio_getTimeFrequency()
+	return uint64(frequency)
+}
+
 func convertKey(k rune) (key.Name, bool) {
 	var n key.Name
 	switch k {
@@ -1085,4 +1112,4 @@ func convertMods(mods C.NSUInteger) key.Modifiers {
 	return kmods
 }
 
-func (_ ViewEvent) ImplementsEvent() {}
+func (ViewEvent) ImplementsEvent() {}
