@@ -175,7 +175,9 @@ func (c *mtlContext) Refresh() error {
 func (c *mtlContext) SwapBuffers() {
 	fmt.Println("not implemented")
 }
-
+func (c *mtlContext) SwapInterval(interval int) {
+	fmt.Println("not implemented")
+}
 func (w *window) NewContext() (mado.Context, error) {
 	return newMtlContext(w)
 }

@@ -50,6 +50,17 @@ void gio_swapBuffers(CFTypeRef ctxRef)
     } // autoreleasepool
 }
 
+void gio_swapInterval(CFTypeRef ctxRef, int interval)
+{
+    @autoreleasepool {
+
+	NSOpenGLContext *ctx = (__bridge NSOpenGLContext *)ctxRef;
+    [ctx setValues:&interval
+                              forParameter:NSOpenGLContextParameterSwapInterval];
+
+    } // autoreleasepool
+}
+
 void gio_setContextView(CFTypeRef ctxRef, CFTypeRef viewRef) {
 	NSOpenGLContext *ctx = (__bridge NSOpenGLContext *)ctxRef;
 	NSView *view = (__bridge NSView *)viewRef;
@@ -89,4 +100,32 @@ void gio_unlockContext(CFTypeRef ctxRef) {
 		NSOpenGLContext *ctx = (__bridge NSOpenGLContext *)ctxRef;
 		CGLUnlockContext([ctx CGLContextObj]);
 	}
+}
+
+CFBundleRef bundleOpengl;
+
+void gio_initNSGL(void)
+{
+    if (bundleOpengl)
+        return;
+
+    bundleOpengl =
+        CFBundleGetBundleWithIdentifier(CFSTR("com.apple.opengl"));
+}
+
+void * gio_getProcAddress(const char* procname)
+{
+	if (!bundleOpengl) {
+		gio_initNSGL();
+	}
+    CFStringRef symbolName = CFStringCreateWithCString(kCFAllocatorDefault,
+                                                       procname,
+                                                       kCFStringEncodingASCII);
+	void *symbol;
+	symbol = CFBundleGetFunctionPointerForName(bundleOpengl,
+                                                          symbolName);
+
+    CFRelease(symbolName);
+
+    return symbol;
 }

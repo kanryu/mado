@@ -27,8 +27,10 @@ var theApp *Application
 // Application keeps track of all the windows and global state.
 type Application struct {
 	// Context is used to broadcast application shutdown.
-	Context context.Context
-	Stop    context.CancelFunc
+	Context    context.Context
+	Stop       context.CancelFunc
+	Ctx        mado.Context
+	MainWindow *Window
 	// Shutdown shuts down all windows.
 	Shutdown func()
 	// active keeps track the open windows, such that application
@@ -52,6 +54,7 @@ func NewApplication(ctx context.Context, stop context.CancelFunc) *Application {
 func (a *Application) appendWindow(w *Window) {
 	windows.put(w)
 	a.Active.Add(1)
+	a.MainWindow = w
 
 	go func() {
 		defer a.Active.Done()

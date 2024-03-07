@@ -176,6 +176,7 @@ type Context interface {
 	Lock() error
 	Unlock()
 	SwapBuffers()
+	SwapInterval(interval int)
 }
 
 // Driver is the interface for the platform implementation

@@ -449,7 +449,7 @@ func (w *Window) GetFrameSize() (left, top, right, bottom int) {
 // This function may only be called from the main thread.
 func (w *Window) GetContentScale() (float32, float32) {
 	fmt.Println("not implemented")
-	return 800, 600
+	return 1.0, 1.0
 }
 
 // GetOpacity function returns the opacity of the window, including any

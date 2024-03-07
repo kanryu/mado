@@ -124,6 +124,7 @@ bool withPollEvents = false;
 	[super setFrameSize:newSize];
 	[self setNeedsDisplay:YES];
 }
+
 // drawRect is called when OpenGL is used, displayLayer otherwise.
 // Don't know why.
 - (void)drawRect:(NSRect)r {

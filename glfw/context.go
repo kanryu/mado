@@ -16,6 +16,7 @@ func (w *Window) MakeContextCurrent() {
 		panic(err)
 	} else {
 		w.ctx = ctx
+		theApp.Ctx = ctx
 	}
 	panicError()
 }
@@ -28,8 +29,7 @@ func DetachCurrentContext() {
 
 // GetCurrentContext returns the window whose context is current.
 func GetCurrentContext() *Window {
-	fmt.Println("not implemented")
-	return nil
+	return theApp.MainWindow
 }
 
 // SwapBuffers swaps the front and back buffers of the window. If the
@@ -57,7 +57,7 @@ func (w *Window) SwapBuffers() {
 // Some GPU drivers do not honor the requested swap interval, either because of
 // user settings that override the request or due to bugs in the driver.
 func SwapInterval(interval int) {
-	fmt.Println("not implemented")
+	theApp.Ctx.SwapInterval(interval)
 	panicError()
 }
 
