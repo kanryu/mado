@@ -6,12 +6,14 @@
 package windows
 
 import (
+	"errors"
 	"fmt"
 	"runtime"
 	"time"
 	"unicode/utf16"
 	"unsafe"
 
+	"golang.org/x/sys/windows"
 	syscall "golang.org/x/sys/windows"
 )
 
@@ -79,6 +81,35 @@ type MinMaxInfo struct {
 type NCCalcSizeParams struct {
 	Rgrc  [3]Rect
 	LpPos *WindowPos
+}
+
+type PIXELFORMATDESCRIPTOR struct {
+	Size           uint16
+	Version        uint16
+	Flags          uint32
+	PixelType      byte
+	ColorBits      byte
+	RedBits        byte
+	RedShift       byte
+	GreenBits      byte
+	GreenShift     byte
+	BlueBits       byte
+	BlueShift      byte
+	AlphaBits      byte
+	AlphaShift     byte
+	AccumBits      byte
+	AccumRedBits   byte
+	AccumGreenBits byte
+	AccumBlueBits  byte
+	AccumAlphaBits byte
+	DepthBits      byte
+	StencilBits    byte
+	AuxBuffers     byte
+	LayerType      byte
+	Reserved       byte
+	LayerMask      uint32
+	VisibleMask    uint32
+	DamageMask     uint32
 }
 
 type WindowPos struct {
@@ -341,12 +372,14 @@ const (
 )
 
 var (
-	kernel32          = syscall.NewLazySystemDLL("kernel32.dll")
-	_GetModuleHandleW = kernel32.NewProc("GetModuleHandleW")
-	_GlobalAlloc      = kernel32.NewProc("GlobalAlloc")
-	_GlobalFree       = kernel32.NewProc("GlobalFree")
-	_GlobalLock       = kernel32.NewProc("GlobalLock")
-	_GlobalUnlock     = kernel32.NewProc("GlobalUnlock")
+	kernel32                   = syscall.NewLazySystemDLL("kernel32.dll")
+	_GetModuleHandleW          = kernel32.NewProc("GetModuleHandleW")
+	_GlobalAlloc               = kernel32.NewProc("GlobalAlloc")
+	_GlobalFree                = kernel32.NewProc("GlobalFree")
+	_GlobalLock                = kernel32.NewProc("GlobalLock")
+	_GlobalUnlock              = kernel32.NewProc("GlobalUnlock")
+	_QueryPerformanceCounter   = kernel32.NewProc("QueryPerformanceCounter")
+	_QueryPerformanceFrequency = kernel32.NewProc("QueryPerformanceFrequency")
 
 	user32                       = syscall.NewLazySystemDLL("user32.dll")
 	_AdjustWindowRectEx          = user32.NewProc("AdjustWindowRectEx")
@@ -406,8 +439,12 @@ var (
 	shcore            = syscall.NewLazySystemDLL("shcore")
 	_GetDpiForMonitor = shcore.NewProc("GetDpiForMonitor")
 
-	gdi32          = syscall.NewLazySystemDLL("gdi32")
-	_GetDeviceCaps = gdi32.NewProc("GetDeviceCaps")
+	gdi32                = syscall.NewLazySystemDLL("gdi32")
+	_ChoosePixelFormat   = gdi32.NewProc("ChoosePixelFormat")
+	_DescribePixelFormat = gdi32.NewProc("DescribePixelFormat")
+	_GetDeviceCaps       = gdi32.NewProc("GetDeviceCaps")
+	_SetPixelFormat      = gdi32.NewProc("SetPixelFormat")
+	_SwapBuffers         = gdi32.NewProc("SwapBuffers")
 
 	imm32                    = syscall.NewLazySystemDLL("imm32")
 	_ImmGetContext           = imm32.NewProc("ImmGetContext")
@@ -428,6 +465,14 @@ func AdjustWindowRectEx(r *Rect, dwStyle uint32, bMenu int, dwExStyle uint32) {
 func CallMsgFilter(m *Msg, nCode uintptr) bool {
 	r, _, _ := _CallMsgFilter.Call(uintptr(unsafe.Pointer(m)), nCode)
 	return r != 0
+}
+
+func ChoosePixelFormat(hdc syscall.Handle, ppfd *PIXELFORMATDESCRIPTOR) (int32, error) {
+	r, _, e := _ChoosePixelFormat.Call(uintptr(hdc), uintptr(unsafe.Pointer(ppfd)))
+	if int32(r) == 0 && !errors.Is(e, windows.ERROR_SUCCESS) {
+		return 0, fmt.Errorf("glfw: ChoosePixelFormat failed: %w", e)
+	}
+	return int32(r), nil
 }
 
 func CloseClipboard() error {
@@ -460,6 +505,14 @@ func CreateWindowEx(dwExStyle uint32, lpClassName uint16, lpWindowName string, d
 func DefWindowProc(hwnd syscall.Handle, msg uint32, wparam, lparam uintptr) uintptr {
 	r, _, _ := _DefWindowProc.Call(uintptr(hwnd), uintptr(msg), wparam, lparam)
 	return r
+}
+
+func DescribePixelFormat(hdc syscall.Handle, iPixelFormat int32, nBytes uint32, ppfd *PIXELFORMATDESCRIPTOR) (int32, error) {
+	r, _, e := _DescribePixelFormat.Call(uintptr(hdc), uintptr(iPixelFormat), uintptr(nBytes), uintptr(unsafe.Pointer(ppfd)))
+	if int32(r) == 0 && !errors.Is(e, windows.ERROR_SUCCESS) {
+		return 0, fmt.Errorf("glfw: DescribePixelFormat failed: %w", e)
+	}
+	return int32(r), nil
 }
 
 func DestroyWindow(hwnd syscall.Handle) {
@@ -776,6 +829,24 @@ func PostMessage(hwnd syscall.Handle, msg uint32, wParam, lParam uintptr) error 
 	return nil
 }
 
+func QueryPerformanceCounter() uint64 {
+	var value uint64
+	r, _, err := _QueryPerformanceCounter.Call(uintptr(unsafe.Pointer(&value)))
+	if r == 0 {
+		panic(fmt.Errorf("QueryPerformanceCounter: %v", err))
+	}
+	return uint64(value)
+}
+
+func QueryPerformanceFrequency() uint64 {
+	var value uint64
+	r, _, err := _QueryPerformanceFrequency.Call(uintptr(unsafe.Pointer(&value)))
+	if r == 0 {
+		panic(fmt.Errorf("QueryPerformanceFrequency: %v", err))
+	}
+	return uint64(value)
+}
+
 func ReleaseCapture() bool {
 	r, _, _ := _ReleaseCapture.Call()
 	return r != 0
@@ -799,6 +870,14 @@ func SetForegroundWindow(hwnd syscall.Handle) {
 
 func SetFocus(hwnd syscall.Handle) {
 	_SetFocus.Call(uintptr(hwnd))
+}
+
+func SetPixelFormat(hdc syscall.Handle, format int32, ppfd *PIXELFORMATDESCRIPTOR) error {
+	r, _, e := _SetPixelFormat.Call(uintptr(hdc), uintptr(format), uintptr(unsafe.Pointer(ppfd)))
+	if int32(r) == 0 && !errors.Is(e, windows.ERROR_SUCCESS) {
+		return fmt.Errorf("glfw: SetPixelFormat failed: %w", e)
+	}
+	return nil
 }
 
 func SetProcessDPIAware() {
@@ -836,6 +915,14 @@ func ScreenToClient(hwnd syscall.Handle, p *Point) {
 
 func ShowWindow(hwnd syscall.Handle, nCmdShow int32) {
 	_ShowWindow.Call(uintptr(hwnd), uintptr(nCmdShow))
+}
+
+func SwapBuffers(hdc syscall.Handle) error {
+	r, _, e := _SwapBuffers.Call(uintptr(hdc))
+	if int32(r) == 0 && !errors.Is(e, windows.ERROR_SUCCESS) {
+		return fmt.Errorf("glfw: SwapBuffers failed: %w", e)
+	}
+	return nil
 }
 
 func TranslateMessage(m *Msg) {

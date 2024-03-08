@@ -64,6 +64,7 @@ const _WM_WAKEUP = windows.WM_USER + iota
 
 type gpuAPI struct {
 	priority    int
+	name        string
 	initializer func(w *window) (mado.Context, error)
 }
 
@@ -107,6 +108,20 @@ func PollEvents() {
 	// 	windows.TranslateMessage(&msg)
 	// 	windows.DispatchMessage(&msg)
 	// }
+}
+
+func GetTimeValue() uint64 {
+	value := windows.QueryPerformanceCounter()
+	return value
+}
+
+var qpFrequency uint64
+
+func GetTimeFrequency() uint64 {
+	if qpFrequency == 0 {
+		qpFrequency = windows.QueryPerformanceFrequency()
+	}
+	return qpFrequency
 }
 
 func newWindow(window mado.Callbacks, options []mado.Option) error {
@@ -679,12 +694,20 @@ func (w *window) draw(sync bool) {
 	})
 }
 
+func (w *window) GetFrameBufferSize() image.Point {
+	rect := windows.GetClientRect(w.hwnd)
+	return image.Pt(int(rect.Right-rect.Left), int(rect.Bottom-rect.Top))
+}
+
 func (w *window) NewContext() (mado.Context, error) {
 	sort.Slice(drivers, func(i, j int) bool {
 		return drivers[i].priority < drivers[j].priority
 	})
 	var errs []string
 	for _, b := range drivers {
+		if GlfwConfig.Enable && b.name != "opengl" {
+			continue
+		}
 		ctx, err := b.initializer(w)
 		if err == nil {
 			return ctx, nil

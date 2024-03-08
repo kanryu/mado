@@ -4,6 +4,7 @@ package app
 
 import (
 	"fmt"
+	"runtime"
 	"unsafe"
 
 	"github.com/kanryu/mado"
@@ -26,6 +27,7 @@ const debugDirectX = false
 func init() {
 	drivers = append(drivers, gpuAPI{
 		priority: 1,
+		name:     "d3d11",
 		initializer: func(w *window) (mado.Context, error) {
 			hwnd, _, _ := w.HWND()
 			var flags uint32
@@ -133,4 +135,20 @@ func (c *d3d11Context) releaseFBO() {
 		d3d11.IUnknownRelease(unsafe.Pointer(c.renderTarget), c.renderTarget.Vtbl.Release)
 		c.renderTarget = nil
 	}
+}
+
+func (c *d3d11Context) MakeCurrentContext() error {
+	// OpenGL contexts are implicit and thread-local. Lock the OS thread.
+	runtime.LockOSThread()
+
+	fmt.Println("not implamented")
+	return nil
+}
+
+func (c *d3d11Context) SwapBuffers() {
+	fmt.Println("not implamented")
+}
+
+func (c *d3d11Context) SwapInterval(interval int) {
+	fmt.Println("not implamented")
 }

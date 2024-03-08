@@ -129,6 +129,7 @@ func (a *Application) Wait() {
 //
 // This function may only be called from the main thread.
 func Init() error {
+	app.GlfwConfig.Enable = true
 	app.EnablePollEvents()
 	app.Main()
 
