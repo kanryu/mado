@@ -37,6 +37,12 @@ The word 'Mado' is the Japanese word for '窓(まど)' and the meaning is Window
 
 - Completed GUI toolkit and game engine
 
+## FAQ
+
+- OpenGL examples can'nt run on MacOS
+  - currently, metal context is selected as default. so run it
+  - `go main -tags=nometal main.go`
+
 ## License
 
 MIT / The UNLICENSE

@@ -122,7 +122,7 @@ type FbConfig struct {
 type GlfwContext struct {
 	Client     int
 	Source     int
-	Fajor      int
+	Major      int
 	Minor      int
 	Revision   int
 	Forward    bool
