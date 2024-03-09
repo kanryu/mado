@@ -75,7 +75,9 @@ func (c *Callbacks) Event(e event.Event) bool {
 		// POST events to glfw callbacks
 		switch e2 := e.(type) {
 		case app.ViewEvent:
-			close(c.WindowInitialized)
+			if c.WindowInitialized != nil {
+				close(c.WindowInitialized)
+			}
 		case mado.StageEvent:
 			switch e2.Stage {
 			case mado.StagePaused:

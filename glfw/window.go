@@ -304,6 +304,7 @@ func CreateWindow(width, height int, title string, monitor *Monitor, share *Wind
 			PollEvents()
 			continue
 		case <-wnd.callbacks.WindowInitialized:
+			wnd.callbacks.WindowInitialized = nil
 			return wnd, nil
 		}
 	}
