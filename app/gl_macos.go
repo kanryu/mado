@@ -51,20 +51,6 @@ import "C"
 type NSOpenGLPixelFormatAttribute uint32
 
 const (
-	GLFW_DONT_CARE              = 0
-	GLFW_NO_API                 = 0
-	GLFW_OPENGL_API             = 0x00030001
-	GLFW_OPENGL_ES_API          = 0x00030002
-	GLFW_OPENGL_ANY_PROFILE     = 0
-	GLFW_OPENGL_CORE_PROFILE    = 0x00032001
-	GLFW_OPENGL_COMPAT_PROFILE  = 0x00032002
-	GLFW_NO_ROBUSTNESS          = 0
-	GLFW_NO_RESET_NOTIFICATION  = 0x00031001
-	GLFW_LOSE_CONTEXT_ON_RESET  = 0x00031002
-	GLFW_ANY_RELEASE_BEHAVIOR   = 0
-	GLFW_RELEASE_BEHAVIOR_FLUSH = 0x00035001
-	GLFW_RELEASE_BEHAVIOR_NONE  = 0x00035002
-
 	NSOpenGLPFADoubleBuffer                   = 5
 	NSOpenGLPFAAuxBuffers                     = 7
 	NSOpenGLPFAColorSize                      = 8
@@ -83,49 +69,20 @@ const (
 	NSOpenGLProfileVersion3_2Core             = 0x3200
 )
 
-type CtxConfig struct {
-	client     int
-	source     int
-	major      int
-	minor      int
-	forward    bool
-	debug      bool
-	noerror    bool
-	profile    int
-	robustness int
-	release    int
-	share      *window
-	offline    bool
+type PlatformContextState struct {
 }
 
-type FbConfig struct {
-	major          int
-	minor          int
-	offline        bool
-	redBits        int
-	greenBits      int
-	blueBits       int
-	alphaBits      int
-	depthBits      int
-	stencilBits    int
-	accumRedBits   int
-	accumGreenBits int
-	accumBlueBits  int
-	accumAlphaBits int
-	auxBuffers     int
-	stereo         bool
-	samples        int
-	sRGB           bool
-	doublebuffer   bool
-	transparent    bool
+type PlatformLibraryContextState struct {
+	inited bool
 }
 
 var _ mado.Context = (*glContext)(nil)
 
 type glContext struct {
-	c    *gl.Functions
-	ctx  C.CFTypeRef
-	view C.CFTypeRef
+	c       *gl.Functions
+	ctx     C.CFTypeRef
+	view    C.CFTypeRef
+	context context
 
 	glFlush C.PFN_glFlush
 }
@@ -158,13 +115,7 @@ func newContext(w *window) (*glContext, error) {
 	c.Lock()
 	// defer c.Unlock()
 	//c.MakeCurrentContext()
-	wincontext := CtxConfig{
-		major:  2,
-		minor:  0,
-		client: GLFW_OPENGL_API,
-	}
-	ctxconfig := wincontext
-	err = c.RefreshContextAttribs(&wincontext, &ctxconfig)
+	err = c.RefreshContextAttribs(&GlfwConfig.Hints.Context)
 	if err != nil {
 		return nil, err
 	}
@@ -185,23 +136,12 @@ func newGlContext() C.CFTypeRef {
 	// _glfw.hints.framebuffer.alphaBits    = 8;
 	// _glfw.hints.framebuffer.depthBits    = 24;
 	// _glfw.hints.framebuffer.stencilBits  = 8;
-	// _glfw.hints.framebuffer.doublebuffer = GLFW_TRUE;z
-	fbconfig := FbConfig{
-		major:        2,
-		minor:        1,
-		redBits:      8,
-		greenBits:    8,
-		blueBits:     8,
-		alphaBits:    8,
-		depthBits:    24,
-		stencilBits:  8,
-		doublebuffer: true,
-	}
-	attribs := makeGlV2Attributes(fbconfig)
+	// _glfw.hints.framebuffer.doublebuffer = GLFW_TRUE;
+	attribs := makeGlV2Attributes(&GlfwConfig.Hints.Context, &GlfwConfig.Hints.framebuffer)
 	return C.gio_createGLContext2((*C.uint)(unsafe.Pointer(&attribs[0])))
 }
 
-func (c *glContext) RefreshContextAttribs(wincontext *CtxConfig, ctxconfig *CtxConfig) error {
+func (c *glContext) RefreshContextAttribs(ctxconfig *CtxConfig) error {
 	f, err := gl.NewFunctions(nil, false)
 	if err != nil {
 		return err
@@ -219,17 +159,17 @@ func (c *glContext) RefreshContextAttribs(wincontext *CtxConfig, ctxconfig *CtxC
 	}
 	for _, pref := range prefixes {
 		if glVer[:len(pref)] == pref {
-			wincontext.client = GLFW_OPENGL_ES_API
+			c.context.client = GLFW_OPENGL_ES_API
 		}
 	}
 	ver, _, err := gl.ParseGLVersion(glVer)
 	if err != nil {
 		return err
 	}
-	wincontext.major, wincontext.minor = ver[0], ver[1]
-	if wincontext.major < ctxconfig.major ||
-		(wincontext.major == ctxconfig.major &&
-			wincontext.minor < ctxconfig.minor) {
+	c.context.major, c.context.minor = ver[0], ver[1]
+	if c.context.major < ctxconfig.Major ||
+		(c.context.major == ctxconfig.Major &&
+			c.context.minor < ctxconfig.Minor) {
 		// The desired OpenGL version is greater than the actual version
 		// This only happens if the machine lacks {GLX|WGL}_ARB_create_context
 		// /and/ the user has requested an OpenGL version greater than 1.0
@@ -237,50 +177,50 @@ func (c *glContext) RefreshContextAttribs(wincontext *CtxConfig, ctxconfig *CtxC
 		// For API consistency, we emulate the behavior of the
 		// {GLX|WGL}_ARB_create_context extension and fail here
 
-		if wincontext.client == GLFW_OPENGL_API {
+		if c.context.client == GLFW_OPENGL_API {
 			return fmt.Errorf("Requested OpenGL version %i.%i, got version %i.%i",
-				ctxconfig.major, ctxconfig.minor,
-				wincontext, wincontext.minor,
+				ctxconfig.Major, ctxconfig.Minor,
+				c.context.major, c.context.minor,
 			)
 		} else {
 			return fmt.Errorf("Requested OpenGL ES version %i.%i, got version %i.%i",
-				ctxconfig.major, ctxconfig.minor,
-				wincontext.major, wincontext.minor,
+				ctxconfig.Major, ctxconfig.Minor,
+				c.context.major, c.context.minor,
 			)
 		}
 	}
 	// Read back context flags (OpenGL 3.0 and above)
-	if wincontext.major >= 3 {
+	if c.context.major >= 3 {
 		flags := f.GetInteger(gl.CONTEXT_FLAGS)
 		if flags&gl.CONTEXT_FLAG_FORWARD_COMPATIBLE_BIT != 0 {
-			wincontext.forward = true
+			c.context.forward = true
 		}
 		if flags&gl.CONTEXT_FLAG_DEBUG_BIT != 0 {
-			wincontext.debug = true
+			c.context.debug = true
 		} else if slices.Contains(exts, "GL_ARB_debug_output") && ctxconfig.debug {
 			// HACK: This is a workaround for older drivers (pre KHR_debug)
 			//       not setting the debug bit in the context flags for
 			//       debug contexts
-			wincontext.debug = true
+			c.context.debug = true
 		}
 		if flags&gl.CONTEXT_FLAG_NO_ERROR_BIT_KHR != 0 {
-			wincontext.noerror = true
+			c.context.noerror = true
 		}
 	}
 	// Read back OpenGL context profile (OpenGL 3.2 and above)
-	if wincontext.major >= 4 ||
-		(wincontext.major == 3 && wincontext.minor >= 2) {
+	if c.context.major >= 4 ||
+		(c.context.major == 3 && c.context.minor >= 2) {
 		mask := f.GetInteger(gl.CONTEXT_PROFILE_MASK)
 		if mask&gl.CONTEXT_COMPATIBILITY_PROFILE_BIT != 0 {
-			wincontext.profile = GLFW_OPENGL_COMPAT_PROFILE
+			c.context.profile = GLFW_OPENGL_COMPAT_PROFILE
 		} else if mask&gl.CONTEXT_CORE_PROFILE_BIT != 0 {
-			wincontext.profile = GLFW_OPENGL_CORE_PROFILE
+			c.context.profile = GLFW_OPENGL_CORE_PROFILE
 		} else if slices.Contains(exts, "GL_ARB_compatibility") {
 			// HACK: This is a workaround for the compatibility profile bit
 			//       not being set in the context flags if an OpenGL 3.2+
 			//       context was created without having requested a specific
 			//       version
-			wincontext.profile = GLFW_OPENGL_COMPAT_PROFILE
+			c.context.profile = GLFW_OPENGL_COMPAT_PROFILE
 		}
 	}
 
@@ -290,17 +230,17 @@ func (c *glContext) RefreshContextAttribs(wincontext *CtxConfig, ctxconfig *CtxC
 		//       only present from 3.0 while the extension applies from 1.1
 		strategy := f.GetInteger(gl.RESET_NOTIFICATION_STRATEGY_ARB)
 		if strategy == gl.LOSE_CONTEXT_ON_RESET_ARB {
-			wincontext.robustness = GLFW_LOSE_CONTEXT_ON_RESET
+			c.context.robustness = GLFW_LOSE_CONTEXT_ON_RESET
 		} else if strategy == gl.NO_RESET_NOTIFICATION_ARB {
-			wincontext.robustness = GLFW_NO_RESET_NOTIFICATION
+			c.context.robustness = GLFW_NO_RESET_NOTIFICATION
 		}
 	}
 	if slices.Contains(exts, "GL_KHR_context_flush_control") {
 		behavior := f.GetInteger(gl.CONTEXT_RELEASE_BEHAVIOR)
 		if behavior == gl.ZERO {
-			wincontext.release = GLFW_RELEASE_BEHAVIOR_NONE
+			c.context.release = GLFW_RELEASE_BEHAVIOR_NONE
 		} else if behavior == gl.CONTEXT_RELEASE_BEHAVIOR_FLUSH {
-			wincontext.release = GLFW_RELEASE_BEHAVIOR_FLUSH
+			c.context.release = GLFW_RELEASE_BEHAVIOR_FLUSH
 		}
 	}
 	return nil
@@ -374,13 +314,13 @@ func (w *window) NewContext() (mado.Context, error) {
 	return newContext(w)
 }
 
-func makeGlV2Attributes(fbconfig FbConfig) []NSOpenGLPixelFormatAttribute {
+func makeGlV2Attributes(ctxconfig *CtxConfig, fbconfig *FbConfig) []NSOpenGLPixelFormatAttribute {
 	attribs := []NSOpenGLPixelFormatAttribute{
 		NSOpenGLPFAAccelerated,
 		NSOpenGLPFAClosestPolicy,
 	}
 
-	if fbconfig.offline {
+	if ctxconfig.nsgl.offline {
 		attribs = append(attribs, NSOpenGLPFAAllowOfflineRenderers)
 		// NOTE: This replaces the NSSupportsAutomaticGraphicsSwitching key in
 		//       Info.plist for unbundled applications
@@ -389,12 +329,12 @@ func makeGlV2Attributes(fbconfig FbConfig) []NSOpenGLPixelFormatAttribute {
 		attribs = append(attribs, kCGLPFASupportsAutomaticGraphicsSwitching)
 	}
 
-	if fbconfig.major >= 4 {
+	if ctxconfig.Major >= 4 {
 		attribs = append(attribs, NSOpenGLPFAOpenGLProfile, NSOpenGLProfileVersion4_1Core)
-	} else if fbconfig.major >= 3 {
+	} else if ctxconfig.Major >= 3 {
 		attribs = append(attribs, NSOpenGLPFAOpenGLProfile, NSOpenGLProfileVersion3_2Core)
 	}
-	if fbconfig.major <= 2 {
+	if ctxconfig.Major <= 2 {
 		if fbconfig.auxBuffers != GLFW_DONT_CARE {
 			attribs = append(attribs, NSOpenGLPFAAuxBuffers, NSOpenGLPixelFormatAttribute(fbconfig.auxBuffers))
 		}

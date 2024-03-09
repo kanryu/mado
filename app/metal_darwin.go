@@ -172,8 +172,9 @@ func (c *mtlContext) Refresh() error {
 	return nil
 }
 
-func (c *mtlContext) SwapBuffers() {
+func (c *mtlContext) SwapBuffers() error {
 	fmt.Println("not implemented")
+	return nil
 }
 func (c *mtlContext) SwapInterval(interval int) {
 	fmt.Println("not implemented")

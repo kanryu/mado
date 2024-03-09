@@ -8,11 +8,47 @@ package app
 const (
 	_GLFW_INSERT_FIRST = 0
 	_GLFW_INSERT_LAST  = 1
+
+	GLFW_TRUE  = true
+	GLFW_FALSE = false
+
+	GLFW_DONT_CARE              = 0
+	GLFW_NO_API                 = 0
+	GLFW_OPENGL_API             = 0x00030001
+	GLFW_OPENGL_ES_API          = 0x00030002
+	GLFW_OPENGL_ANY_PROFILE     = 0
+	GLFW_OPENGL_CORE_PROFILE    = 0x00032001
+	GLFW_OPENGL_COMPAT_PROFILE  = 0x00032002
+	GLFW_NO_ROBUSTNESS          = 0
+	GLFW_NO_RESET_NOTIFICATION  = 0x00031001
+	GLFW_LOSE_CONTEXT_ON_RESET  = 0x00031002
+	GLFW_ANY_RELEASE_BEHAVIOR   = 0
+	GLFW_RELEASE_BEHAVIOR_FLUSH = 0x00035001
+	GLFW_RELEASE_BEHAVIOR_NONE  = 0x00035002
 )
 const (
 	True     int = 1 // GL_TRUE
 	False    int = 0 // GL_FALSE
 	DontCare int = -1
+
+	AnyReleaseBehavior   = 0
+	CursorDisabled       = 0x00034003
+	CursorHidden         = 0x00034002
+	CursorNormal         = 0x00034001
+	EGLContextAPI        = 0x00036002
+	LoseContextOnReset   = 0x00031002
+	NativeContextAPI     = 0x00036001
+	NoAPI                = 0
+	NoResetNotification  = 0x00031001
+	NoRobustness         = 0
+	OpenGLAPI            = 0x00030001
+	OpenGLAnyProfile     = 0
+	OpenGLCompatProfile  = 0x00032002
+	OpenGLCoreProfile    = 0x00032001
+	OpenGLESAPI          = 0x00030002
+	OSMesaContextAPI     = 0x00036003
+	ReleaseBehaviorFlush = 0x00035001
+	ReleaseBehaviorNone  = 0x00035002
 )
 
 var GlfwConfig Library
@@ -50,6 +86,9 @@ type CtxConfig struct {
 	robustness int
 	release    int
 	share      *Window
+	nsgl       struct {
+		offline bool
+	}
 }
 
 type FbConfig struct {
@@ -136,4 +175,12 @@ func glfwconfiginit() {
 	GlfwConfig.Hints.Context.Minor = 0
 	GlfwConfig.Hints.Context.Client = GLFW_OPENGL_API
 	GlfwConfig.Hints.Context.source = NativeContextAPI
+
+	GlfwConfig.Hints.framebuffer.redBits = 8
+	GlfwConfig.Hints.framebuffer.greenBits = 8
+	GlfwConfig.Hints.framebuffer.blueBits = 8
+	GlfwConfig.Hints.framebuffer.alphaBits = 8
+	GlfwConfig.Hints.framebuffer.depthBits = 24
+	GlfwConfig.Hints.framebuffer.stencilBits = 8
+	GlfwConfig.Hints.framebuffer.doublebuffer = GLFW_TRUE
 }
