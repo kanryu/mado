@@ -4,8 +4,10 @@ import (
 	"fmt"
 	"image"
 	"io"
+	"runtime"
 	"strings"
 	"sync"
+	"time"
 	"unsafe"
 
 	"github.com/kanryu/mado"
@@ -247,7 +249,9 @@ func CreateWindow(width, height int, title string, monitor *Monitor, share *Wind
 		app.Size(unit.Dp(width), unit.Dp(height)),
 		app.Title(title),
 	}
-	c := &Callbacks{}
+	c := &Callbacks{
+		WindowInitialized: make(chan struct{}),
+	}
 	w := app.NewWindow(c, options...)
 	wnd := &Window{
 		App:                    theApp,
@@ -292,7 +296,17 @@ func CreateWindow(width, height int, title string, monitor *Monitor, share *Wind
 	}
 	c.SetGlfwWindow(wnd)
 	theApp.appendWindow(wnd)
-	return wnd, nil
+	for {
+		runtime.Gosched()
+		t := time.NewTicker(time.Millisecond)
+		select {
+		case <-t.C:
+			PollEvents()
+			continue
+		case <-wnd.callbacks.WindowInitialized:
+			return wnd, nil
+		}
+	}
 }
 
 // Destroy destroys the specified window and its context. On calling this

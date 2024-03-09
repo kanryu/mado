@@ -2,8 +2,6 @@ package glfw
 
 import (
 	"fmt"
-	"runtime"
-	"time"
 	"unsafe"
 )
 
@@ -12,8 +10,6 @@ import (
 // But since we're using receievers, DetachCurrentContext should
 // be used instead.
 func (w *Window) MakeContextCurrent() {
-	PollEvents()
-	runtime.Gosched()
 	if ctx, err := w.callbacks.D.NewContext(); err != nil {
 		panic(err)
 	} else {
@@ -41,8 +37,6 @@ func (w *Window) SwapBuffers() {
 	if err := w.ctx.SwapBuffers(); err != nil {
 		panic(err)
 	}
-	t := time.NewTicker(1000 / 60 * time.Millisecond)
-	<-t.C
 	panicError()
 }
 

@@ -1,7 +1,6 @@
 package glfw
 
 import (
-	"fmt"
 	"image"
 	"time"
 	"unicode/utf8"
@@ -33,6 +32,7 @@ type Callbacks struct {
 	PrevModifiers       key.Modifiers
 	Preedit             string
 	WaitEvents          []event.Event
+	WindowInitialized   chan struct{}
 }
 
 func (c *Callbacks) GetWindow() mado.Window {
@@ -48,7 +48,6 @@ func (c *Callbacks) SetGlfwWindow(gw *Window) {
 }
 
 func (c *Callbacks) SetDriver(d mado.Driver) {
-	fmt.Println("SetDriver")
 	c.D = d
 	var wakeup func()
 	if d != nil {
@@ -75,6 +74,8 @@ func (c *Callbacks) Event(e event.Event) bool {
 		handled = c.W.ProcessEvent(c.D, e)
 		// POST events to glfw callbacks
 		switch e2 := e.(type) {
+		case app.ViewEvent:
+			close(c.WindowInitialized)
 		case mado.StageEvent:
 			switch e2.Stage {
 			case mado.StagePaused:
