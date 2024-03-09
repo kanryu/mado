@@ -20,10 +20,10 @@ func main() {
 		panic(err)
 	}
 	defer glfw.Terminate()
-	// glfw.WindowHint(glfw.ClientAPI, glfw.OpenGLAPI)
-	// glfw.WindowHint(glfw.ContextCreationAPI, glfw.NativeContextAPI)
-	// glfw.WindowHint(glfw.ContextVersionMajor, 2)
-	// glfw.WindowHint(glfw.ContextVersionMinor, 0)
+	glfw.WindowHint(glfw.ClientAPI, glfw.OpenGLAPI)
+	glfw.WindowHint(glfw.ContextCreationAPI, glfw.NativeContextAPI)
+	glfw.WindowHint(glfw.ContextVersionMajor, 2)
+	glfw.WindowHint(glfw.ContextVersionMinor, 1)
 
 	window, err := glfw.CreateWindow(640, 480, "Testing", nil, nil)
 	if err != nil {

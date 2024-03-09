@@ -334,7 +334,7 @@ var _ mado.Context = (*glContext)(nil)
 type glContext struct {
 	win          *window
 	hglrc        winsyscall.Handle
-	context      context
+	context      GlfwContext
 	doublebuffer bool
 }
 
@@ -372,7 +372,7 @@ func (c *glContext) MakeCurrentContext() error {
 	if err := c.initWGL(); err != nil {
 		panic(err)
 	}
-	if hglrc, err := c.createContextWGL(&GlfwConfig.Hints.Context, &GlfwConfig.Hints.framebuffer); err != nil {
+	if hglrc, err := c.createContextWGL(&GlfwConfig.Hints.Context, &GlfwConfig.Hints.Framebuffer); err != nil {
 		panic(err)
 	} else {
 		c.hglrc = hglrc
@@ -506,11 +506,11 @@ func (c *glContext) createContextWGL(ctxconfig *CtxConfig, fbconfig *FbConfig) (
 	}
 
 	if ctxconfig.Client == OpenGLAPI {
-		if ctxconfig.forward && !GlfwConfig.PlatformContext.ARB_create_context {
+		if ctxconfig.Forward && !GlfwConfig.PlatformContext.ARB_create_context {
 			return EmptyHandle, fmt.Errorf("glfw: a forward compatible OpenGL context requested but WGL_ARB_create_context is unavailable: %w", VersionUnavailable)
 		}
 
-		if ctxconfig.profile != 0 && !GlfwConfig.PlatformContext.ARB_create_context_profile {
+		if ctxconfig.Profile != 0 && !GlfwConfig.PlatformContext.ARB_create_context_profile {
 			return EmptyHandle, fmt.Errorf("glfw: OpenGL profile requested but WGL_ARB_create_context_profile is unavailable: %w", VersionUnavailable)
 		}
 	} else {
@@ -523,46 +523,46 @@ func (c *glContext) createContextWGL(ctxconfig *CtxConfig, fbconfig *FbConfig) (
 		var flags int32
 		var mask int32
 		if ctxconfig.Client == OpenGLAPI {
-			if ctxconfig.forward {
+			if ctxconfig.Forward {
 				flags |= _WGL_CONTEXT_FORWARD_COMPATIBLE_BIT_ARB
 			}
 
-			if ctxconfig.profile == OpenGLCoreProfile {
+			if ctxconfig.Profile == OpenGLCoreProfile {
 				mask |= _WGL_CONTEXT_CORE_PROFILE_BIT_ARB
-			} else if ctxconfig.profile == OpenGLCompatProfile {
+			} else if ctxconfig.Profile == OpenGLCompatProfile {
 				mask |= _WGL_CONTEXT_COMPATIBILITY_PROFILE_BIT_ARB
 			}
 		} else {
 			mask |= _WGL_CONTEXT_ES2_PROFILE_BIT_EXT
 		}
 
-		if ctxconfig.debug {
+		if ctxconfig.Debug {
 			flags |= _WGL_CONTEXT_DEBUG_BIT_ARB
 		}
 
 		var attribs []int32
-		if ctxconfig.robustness != 0 {
+		if ctxconfig.Robustness != 0 {
 			if GlfwConfig.PlatformContext.ARB_create_context_robustness {
-				if ctxconfig.robustness == NoResetNotification {
+				if ctxconfig.Robustness == NoResetNotification {
 					attribs = append(attribs, _WGL_CONTEXT_RESET_NOTIFICATION_STRATEGY_ARB, _WGL_NO_RESET_NOTIFICATION_ARB)
-				} else if ctxconfig.robustness == LoseContextOnReset {
+				} else if ctxconfig.Robustness == LoseContextOnReset {
 					attribs = append(attribs, _WGL_CONTEXT_RESET_NOTIFICATION_STRATEGY_ARB, _WGL_LOSE_CONTEXT_ON_RESET_ARB)
 				}
 				flags |= _WGL_CONTEXT_ROBUST_ACCESS_BIT_ARB
 			}
 		}
 
-		if ctxconfig.release != 0 {
+		if ctxconfig.Release != 0 {
 			if GlfwConfig.PlatformContext.ARB_context_flush_control {
-				if ctxconfig.release == ReleaseBehaviorNone {
+				if ctxconfig.Release == ReleaseBehaviorNone {
 					attribs = append(attribs, _WGL_CONTEXT_RELEASE_BEHAVIOR_ARB, _WGL_CONTEXT_RELEASE_BEHAVIOR_NONE_ARB)
-				} else if ctxconfig.release == ReleaseBehaviorFlush {
+				} else if ctxconfig.Release == ReleaseBehaviorFlush {
 					attribs = append(attribs, _WGL_CONTEXT_RELEASE_BEHAVIOR_ARB, _WGL_CONTEXT_RELEASE_BEHAVIOR_FLUSH_ARB)
 				}
 			}
 		}
 
-		if ctxconfig.noerror {
+		if ctxconfig.Noerror {
 			if GlfwConfig.PlatformContext.ARB_create_context_no_error {
 				attribs = append(attribs, _WGL_CONTEXT_OPENGL_NO_ERROR_ARB, 1)
 			}
@@ -612,8 +612,8 @@ func (c *glContext) refreshContextAttribs(ctxconfig *CtxConfig) (ferr error) {
 		GL_VERSION                             = 0x1F02
 	)
 
-	c.context.source = ctxconfig.source
-	c.context.client = OpenGLAPI
+	c.context.Source = ctxconfig.Source
+	c.context.Client = OpenGLAPI
 
 	// p, err := _glfc.contextSlot.get()
 	// if err != nil {
@@ -659,24 +659,24 @@ func (c *glContext) refreshContextAttribs(ctxconfig *CtxConfig) (ferr error) {
 		"OpenGL ES "} {
 		if strings.HasPrefix(version, prefix) {
 			version = version[len(prefix):]
-			c.context.client = OpenGLESAPI
+			c.context.Client = OpenGLESAPI
 			break
 		}
 	}
 
 	m := regexp.MustCompile(`^(\d+)(\.(\d+)(\.(\d+))?)?`).FindStringSubmatch(version)
 	if m == nil {
-		if c.context.client == OpenGLAPI {
+		if c.context.Client == OpenGLAPI {
 			return fmt.Errorf("glfw: no version found in OpenGL version string: %w", PlatformError)
 		} else {
 			return fmt.Errorf("glfw: no version found in OpenGL ES version string: %w", PlatformError)
 		}
 	}
-	c.context.major, _ = strconv.Atoi(m[1])
-	c.context.minor, _ = strconv.Atoi(m[3])
-	c.context.revision, _ = strconv.Atoi(m[5])
+	c.context.Fajor, _ = strconv.Atoi(m[1])
+	c.context.Minor, _ = strconv.Atoi(m[3])
+	c.context.Revision, _ = strconv.Atoi(m[5])
 
-	if c.context.major < ctxconfig.Major || (c.context.major == ctxconfig.Major && c.context.minor < ctxconfig.Minor) {
+	if c.context.Fajor < ctxconfig.Major || (c.context.Fajor == ctxconfig.Major && c.context.Minor < ctxconfig.Minor) {
 		// The desired OpenGL version is greater than the actual version
 		// This only happens if the machine lacks {GLX|WGL}_ARB_create_context
 		// /and/ the user has requested an OpenGL version greater than 1.0
@@ -684,14 +684,14 @@ func (c *glContext) refreshContextAttribs(ctxconfig *CtxConfig) (ferr error) {
 		// For API consistency, we emulate the behavior of the
 		// {GLX|WGL}_ARB_create_context extension and fail here
 
-		if c.context.client == OpenGLAPI {
-			return fmt.Errorf("glfw: requested OpenGL version %d.%d, got version %d.%d: %w", ctxconfig.Major, ctxconfig.Minor, c.context.major, c.context.minor, VersionUnavailable)
+		if c.context.Client == OpenGLAPI {
+			return fmt.Errorf("glfw: requested OpenGL version %d.%d, got version %d.%d: %w", ctxconfig.Major, ctxconfig.Minor, c.context.Fajor, c.context.Minor, VersionUnavailable)
 		} else {
-			return fmt.Errorf("glfw: requested OpenGL ES version %d.%d, got version %d.%d: %w", ctxconfig.Major, ctxconfig.Minor, c.context.major, c.context.minor, VersionUnavailable)
+			return fmt.Errorf("glfw: requested OpenGL ES version %d.%d, got version %d.%d: %w", ctxconfig.Major, ctxconfig.Minor, c.context.Fajor, c.context.Minor, VersionUnavailable)
 		}
 	}
 
-	if c.context.major >= 3 {
+	if c.context.Fajor >= 3 {
 		// OpenGL 3.0+ uses a different function for extension string retrieval
 		// We cache it here instead of in glfwExtensionSupported mostly to alert
 		// users as early as possible that their build may be broken
@@ -702,45 +702,45 @@ func (c *glContext) refreshContextAttribs(ctxconfig *CtxConfig) (ferr error) {
 		}
 	}
 
-	if c.context.client == OpenGLAPI {
+	if c.context.Client == OpenGLAPI {
 		// Read back context flags (OpenGL 3.0 and above)
-		if c.context.major >= 3 {
+		if c.context.Fajor >= 3 {
 			var flags int32
 			_, _, _ = syscall.Syscall(getIntegerv, GL_CONTEXT_FLAGS, uintptr(unsafe.Pointer(&flags)), 0, 0)
 
 			if flags&GL_CONTEXT_FLAG_FORWARD_COMPATIBLE_BIT != 0 {
-				c.context.forward = true
+				c.context.Forward = true
 			}
 
 			if flags&GL_CONTEXT_FLAG_DEBUG_BIT != 0 {
-				c.context.debug = true
+				c.context.Debug = true
 			} else {
 				ok, err := c.ExtensionSupported("GL_ARB_debug_output")
 				if err != nil {
 					return err
 				}
-				if ok && ctxconfig.debug {
+				if ok && ctxconfig.Debug {
 					// HACK: This is a workaround for older drivers (pre KHR_debug)
 					//       not setting the debug bit in the context flags for
 					//       debug contexts
-					c.context.debug = true
+					c.context.Debug = true
 				}
 			}
 
 			if flags&GL_CONTEXT_FLAG_NO_ERROR_BIT_KHR != 0 {
-				c.context.noerror = true
+				c.context.Noerror = true
 			}
 		}
 
 		// Read back OpenGL context profile (OpenGL 3.2 and above)
-		if c.context.major >= 4 || (c.context.major == 3 && c.context.minor >= 2) {
+		if c.context.Fajor >= 4 || (c.context.Fajor == 3 && c.context.Minor >= 2) {
 			var mask int32
 			_, _, _ = syscall.Syscall(getIntegerv, GL_CONTEXT_PROFILE_MASK, uintptr(unsafe.Pointer(&mask)), 0, 0)
 
 			if mask&GL_CONTEXT_COMPATIBILITY_PROFILE_BIT != 0 {
-				c.context.profile = OpenGLCompatProfile
+				c.context.Profile = OpenGLCompatProfile
 			} else if mask&GL_CONTEXT_CORE_PROFILE_BIT != 0 {
-				c.context.profile = OpenGLCoreProfile
+				c.context.Profile = OpenGLCoreProfile
 			} else {
 				ok, err := c.ExtensionSupported("GL_ARB_compatibility")
 				if err != nil {
@@ -751,7 +751,7 @@ func (c *glContext) refreshContextAttribs(ctxconfig *CtxConfig) (ferr error) {
 					//       not being set in the context flags if an OpenGL 3.2+
 					//       context was created without having requested a specific
 					//       version
-					c.context.profile = OpenGLCompatProfile
+					c.context.Profile = OpenGLCompatProfile
 				}
 			}
 		}
@@ -769,9 +769,9 @@ func (c *glContext) refreshContextAttribs(ctxconfig *CtxConfig) (ferr error) {
 			_, _, _ = syscall.Syscall(getIntegerv, GL_RESET_NOTIFICATION_STRATEGY_ARB, uintptr(unsafe.Pointer(&strategy)), 0, 0)
 
 			if strategy == GL_LOSE_CONTEXT_ON_RESET_ARB {
-				c.context.robustness = LoseContextOnReset
+				c.context.Robustness = LoseContextOnReset
 			} else if strategy == GL_NO_RESET_NOTIFICATION_ARB {
-				c.context.robustness = NoResetNotification
+				c.context.Robustness = NoResetNotification
 			}
 		}
 	} else {
@@ -788,9 +788,9 @@ func (c *glContext) refreshContextAttribs(ctxconfig *CtxConfig) (ferr error) {
 			_, _, _ = syscall.Syscall(getIntegerv, GL_RESET_NOTIFICATION_STRATEGY_ARB, uintptr(unsafe.Pointer(&strategy)), 0, 0)
 
 			if strategy == GL_LOSE_CONTEXT_ON_RESET_ARB {
-				c.context.robustness = LoseContextOnReset
+				c.context.Robustness = LoseContextOnReset
 			} else if strategy == GL_NO_RESET_NOTIFICATION_ARB {
-				c.context.robustness = NoResetNotification
+				c.context.Robustness = NoResetNotification
 			}
 		}
 	}
@@ -804,9 +804,9 @@ func (c *glContext) refreshContextAttribs(ctxconfig *CtxConfig) (ferr error) {
 		_, _, _ = syscall.Syscall(getIntegerv, GL_CONTEXT_RELEASE_BEHAVIOR, uintptr(unsafe.Pointer(&behavior)), 0, 0)
 
 		if behavior == GL_NONE {
-			c.context.release = ReleaseBehaviorNone
+			c.context.Release = ReleaseBehaviorNone
 		} else if behavior == GL_CONTEXT_RELEASE_BEHAVIOR_FLUSH {
-			c.context.release = ReleaseBehaviorFlush
+			c.context.Release = ReleaseBehaviorFlush
 		}
 	}
 
@@ -907,43 +907,43 @@ func (w *window) choosePixelFormat(ctxconfig *CtxConfig, fbconfig_ *FbConfig) (i
 				continue
 			}
 
-			if (findAttribValue(_WGL_DOUBLE_BUFFER_ARB) != 0) != fbconfig_.doublebuffer {
+			if (findAttribValue(_WGL_DOUBLE_BUFFER_ARB) != 0) != fbconfig_.Doublebuffer {
 				continue
 			}
 
-			u.redBits = int(findAttribValue(_WGL_RED_BITS_ARB))
-			u.greenBits = int(findAttribValue(_WGL_GREEN_BITS_ARB))
-			u.blueBits = int(findAttribValue(_WGL_BLUE_BITS_ARB))
-			u.alphaBits = int(findAttribValue(_WGL_ALPHA_BITS_ARB))
+			u.RedBits = int(findAttribValue(_WGL_RED_BITS_ARB))
+			u.GreenBits = int(findAttribValue(_WGL_GREEN_BITS_ARB))
+			u.BlueBits = int(findAttribValue(_WGL_BLUE_BITS_ARB))
+			u.AlphaBits = int(findAttribValue(_WGL_ALPHA_BITS_ARB))
 
-			u.depthBits = int(findAttribValue(_WGL_DEPTH_BITS_ARB))
-			u.stencilBits = int(findAttribValue(_WGL_STENCIL_BITS_ARB))
+			u.DepthBits = int(findAttribValue(_WGL_DEPTH_BITS_ARB))
+			u.StencilBits = int(findAttribValue(_WGL_STENCIL_BITS_ARB))
 
-			u.accumRedBits = int(findAttribValue(_WGL_ACCUM_RED_BITS_ARB))
-			u.accumGreenBits = int(findAttribValue(_WGL_ACCUM_GREEN_BITS_ARB))
-			u.accumBlueBits = int(findAttribValue(_WGL_ACCUM_BLUE_BITS_ARB))
-			u.accumAlphaBits = int(findAttribValue(_WGL_ACCUM_ALPHA_BITS_ARB))
+			u.AccumRedBits = int(findAttribValue(_WGL_ACCUM_RED_BITS_ARB))
+			u.AccumGreenBits = int(findAttribValue(_WGL_ACCUM_GREEN_BITS_ARB))
+			u.AccumBlueBits = int(findAttribValue(_WGL_ACCUM_BLUE_BITS_ARB))
+			u.AccumAlphaBits = int(findAttribValue(_WGL_ACCUM_ALPHA_BITS_ARB))
 
-			u.auxBuffers = int(findAttribValue(_WGL_AUX_BUFFERS_ARB))
+			u.AuxBuffers = int(findAttribValue(_WGL_AUX_BUFFERS_ARB))
 
 			if findAttribValue(_WGL_STEREO_ARB) != 0 {
-				u.stereo = true
+				u.Stereo = true
 			}
 
 			if GlfwConfig.PlatformContext.ARB_multisample {
-				u.samples = int(findAttribValue(_WGL_SAMPLES_ARB))
+				u.Samples = int(findAttribValue(_WGL_SAMPLES_ARB))
 			}
 
 			if ctxconfig.Client == OpenGLAPI {
 				if GlfwConfig.PlatformContext.ARB_framebuffer_sRGB || GlfwConfig.PlatformContext.EXT_framebuffer_sRGB {
 					if findAttribValue(_WGL_FRAMEBUFFER_SRGB_CAPABLE_ARB) != 0 {
-						u.sRGB = true
+						u.SRGB = true
 					}
 				}
 			} else {
 				if GlfwConfig.PlatformContext.EXT_colorspace {
 					if findAttribValue(_WGL_COLORSPACE_EXT) == _WGL_COLORSPACE_SRGB_EXT {
-						u.sRGB = true
+						u.SRGB = true
 					}
 				}
 			}
@@ -967,31 +967,31 @@ func (w *window) choosePixelFormat(ctxconfig *CtxConfig, fbconfig_ *FbConfig) (i
 				continue
 			}
 
-			if (pfd.Flags&_PFD_DOUBLEBUFFER != 0) != fbconfig_.doublebuffer {
+			if (pfd.Flags&_PFD_DOUBLEBUFFER != 0) != fbconfig_.Doublebuffer {
 				continue
 			}
 
-			u.redBits = int(pfd.RedBits)
-			u.greenBits = int(pfd.GreenBits)
-			u.blueBits = int(pfd.BlueBits)
-			u.alphaBits = int(pfd.AlphaBits)
+			u.RedBits = int(pfd.RedBits)
+			u.GreenBits = int(pfd.GreenBits)
+			u.BlueBits = int(pfd.BlueBits)
+			u.AlphaBits = int(pfd.AlphaBits)
 
-			u.depthBits = int(pfd.DepthBits)
-			u.stencilBits = int(pfd.StencilBits)
+			u.DepthBits = int(pfd.DepthBits)
+			u.StencilBits = int(pfd.StencilBits)
 
-			u.accumRedBits = int(pfd.AccumRedBits)
-			u.accumGreenBits = int(pfd.AccumGreenBits)
-			u.accumBlueBits = int(pfd.AccumBlueBits)
-			u.accumAlphaBits = int(pfd.AccumAlphaBits)
+			u.AccumRedBits = int(pfd.AccumRedBits)
+			u.AccumGreenBits = int(pfd.AccumGreenBits)
+			u.AccumBlueBits = int(pfd.AccumBlueBits)
+			u.AccumAlphaBits = int(pfd.AccumAlphaBits)
 
-			u.auxBuffers = int(pfd.AuxBuffers)
+			u.AuxBuffers = int(pfd.AuxBuffers)
 
 			if pfd.Flags&_PFD_STEREO != 0 {
-				u.stereo = true
+				u.Stereo = true
 			}
 		}
 
-		u.handle = pixelFormat
+		u.Handle = pixelFormat
 		usableConfigs = append(usableConfigs, &u)
 	}
 
@@ -1004,7 +1004,7 @@ func (w *window) choosePixelFormat(ctxconfig *CtxConfig, fbconfig_ *FbConfig) (i
 		return 0, fmt.Errorf("glfw: failed to find a suitable pixel format")
 	}
 
-	return int(closest.handle), nil
+	return int(closest.Handle), nil
 }
 
 func createHelperWindow() error {
@@ -1098,10 +1098,10 @@ func checkValidContextConfig(ctxconfig *CtxConfig) error {
 	// 	}
 	// }
 
-	if ctxconfig.source != NativeContextAPI &&
-		ctxconfig.source != EGLContextAPI &&
-		ctxconfig.source != OSMesaContextAPI {
-		return fmt.Errorf("glfw: invalid context creation API 0x%08X: %w", ctxconfig.source, InvalidEnum)
+	if ctxconfig.Source != NativeContextAPI &&
+		ctxconfig.Source != EGLContextAPI &&
+		ctxconfig.Source != OSMesaContextAPI {
+		return fmt.Errorf("glfw: invalid context creation API 0x%08X: %w", ctxconfig.Source, InvalidEnum)
 	}
 
 	if ctxconfig.Client != NoAPI &&
@@ -1124,9 +1124,9 @@ func checkValidContextConfig(ctxconfig *CtxConfig) error {
 			return fmt.Errorf("glfw: invalid OpenGL version %d.%d: %w", ctxconfig.Major, ctxconfig.Minor, InvalidValue)
 		}
 
-		if ctxconfig.profile != 0 {
-			if ctxconfig.profile != OpenGLCoreProfile && ctxconfig.profile != OpenGLCompatProfile {
-				return fmt.Errorf("glfw: invalid OpenGL profile 0x%08X: %w", ctxconfig.profile, InvalidEnum)
+		if ctxconfig.Profile != 0 {
+			if ctxconfig.Profile != OpenGLCoreProfile && ctxconfig.Profile != OpenGLCompatProfile {
+				return fmt.Errorf("glfw: invalid OpenGL profile 0x%08X: %w", ctxconfig.Profile, InvalidEnum)
 			}
 
 			if ctxconfig.Major <= 2 || (ctxconfig.Major == 3 && ctxconfig.Minor < 2) {
@@ -1137,7 +1137,7 @@ func checkValidContextConfig(ctxconfig *CtxConfig) error {
 			}
 		}
 
-		if ctxconfig.forward && ctxconfig.Major <= 2 {
+		if ctxconfig.Forward && ctxconfig.Major <= 2 {
 			// Forward-compatible contexts are only defined for OpenGL version 3.0 and above
 			return fmt.Errorf("glfw: forward-compatibility is only defined for OpenGL version 3.0 and above: %w", InvalidValue)
 		}
@@ -1154,15 +1154,15 @@ func checkValidContextConfig(ctxconfig *CtxConfig) error {
 		}
 	}
 
-	if ctxconfig.robustness != 0 {
-		if ctxconfig.robustness != NoResetNotification && ctxconfig.robustness != LoseContextOnReset {
-			return fmt.Errorf("glfw: invalid context robustness mode 0x%08X: %w", ctxconfig.robustness, InvalidEnum)
+	if ctxconfig.Robustness != 0 {
+		if ctxconfig.Robustness != NoResetNotification && ctxconfig.Robustness != LoseContextOnReset {
+			return fmt.Errorf("glfw: invalid context robustness mode 0x%08X: %w", ctxconfig.Robustness, InvalidEnum)
 		}
 	}
 
-	if ctxconfig.release != 0 {
-		if ctxconfig.release != ReleaseBehaviorNone && ctxconfig.release != ReleaseBehaviorFlush {
-			return fmt.Errorf("glfw: invalid context release behavior 0x%08X: %w", ctxconfig.release, InvalidEnum)
+	if ctxconfig.Release != 0 {
+		if ctxconfig.Release != ReleaseBehaviorNone && ctxconfig.Release != ReleaseBehaviorFlush {
+			return fmt.Errorf("glfw: invalid context release behavior 0x%08X: %w", ctxconfig.Release, InvalidEnum)
 		}
 	}
 
@@ -1176,7 +1176,7 @@ func chooseFBConfig(desired *FbConfig, alternatives []*FbConfig) *FbConfig {
 
 	var closest *FbConfig
 	for _, current := range alternatives {
-		if desired.stereo && !current.stereo {
+		if desired.Stereo && !current.Stereo {
 			// Stereo is a hard constraint
 			continue
 		}
@@ -1184,31 +1184,31 @@ func chooseFBConfig(desired *FbConfig, alternatives []*FbConfig) *FbConfig {
 		// Count number of missing buffers
 		missing := 0
 
-		if desired.alphaBits > 0 && current.alphaBits == 0 {
+		if desired.AlphaBits > 0 && current.AlphaBits == 0 {
 			missing++
 		}
 
-		if desired.depthBits > 0 && current.depthBits == 0 {
+		if desired.DepthBits > 0 && current.DepthBits == 0 {
 			missing++
 		}
 
-		if desired.stencilBits > 0 && current.stencilBits == 0 {
+		if desired.StencilBits > 0 && current.StencilBits == 0 {
 			missing++
 		}
 
-		if desired.auxBuffers > 0 &&
-			current.auxBuffers < desired.auxBuffers {
-			missing += desired.auxBuffers - current.auxBuffers
+		if desired.AuxBuffers > 0 &&
+			current.AuxBuffers < desired.AuxBuffers {
+			missing += desired.AuxBuffers - current.AuxBuffers
 		}
 
-		if desired.samples > 0 && current.samples == 0 {
+		if desired.Samples > 0 && current.Samples == 0 {
 			// Technically, several multisampling buffers could be
 			// involved, but that's a lower level implementation detail and
 			// not important to us here, so we count them as one
 			missing++
 		}
 
-		if desired.transparent != current.transparent {
+		if desired.Transparent != current.Transparent {
 			missing++
 		}
 
@@ -1218,65 +1218,65 @@ func chooseFBConfig(desired *FbConfig, alternatives []*FbConfig) *FbConfig {
 		// Calculate color channel size difference value
 		colorDiff := 0
 
-		if desired.redBits != DontCare {
-			colorDiff += (desired.redBits - current.redBits) *
-				(desired.redBits - current.redBits)
+		if desired.RedBits != DontCare {
+			colorDiff += (desired.RedBits - current.RedBits) *
+				(desired.RedBits - current.RedBits)
 		}
 
-		if desired.greenBits != DontCare {
-			colorDiff += (desired.greenBits - current.greenBits) *
-				(desired.greenBits - current.greenBits)
+		if desired.GreenBits != DontCare {
+			colorDiff += (desired.GreenBits - current.GreenBits) *
+				(desired.GreenBits - current.GreenBits)
 		}
 
-		if desired.blueBits != DontCare {
-			colorDiff += (desired.blueBits - current.blueBits) *
-				(desired.blueBits - current.blueBits)
+		if desired.BlueBits != DontCare {
+			colorDiff += (desired.BlueBits - current.BlueBits) *
+				(desired.BlueBits - current.BlueBits)
 		}
 
 		// Calculate non-color channel size difference value
 		extraDiff := 0
 
-		if desired.alphaBits != DontCare {
-			extraDiff += (desired.alphaBits - current.alphaBits) *
-				(desired.alphaBits - current.alphaBits)
+		if desired.AlphaBits != DontCare {
+			extraDiff += (desired.AlphaBits - current.AlphaBits) *
+				(desired.AlphaBits - current.AlphaBits)
 		}
 
-		if desired.depthBits != DontCare {
-			extraDiff += (desired.depthBits - current.depthBits) *
-				(desired.depthBits - current.depthBits)
+		if desired.DepthBits != DontCare {
+			extraDiff += (desired.DepthBits - current.DepthBits) *
+				(desired.DepthBits - current.DepthBits)
 		}
 
-		if desired.stencilBits != DontCare {
-			extraDiff += (desired.stencilBits - current.stencilBits) *
-				(desired.stencilBits - current.stencilBits)
+		if desired.StencilBits != DontCare {
+			extraDiff += (desired.StencilBits - current.StencilBits) *
+				(desired.StencilBits - current.StencilBits)
 		}
 
-		if desired.accumRedBits != DontCare {
-			extraDiff += (desired.accumRedBits - current.accumRedBits) *
-				(desired.accumRedBits - current.accumRedBits)
+		if desired.AccumRedBits != DontCare {
+			extraDiff += (desired.AccumRedBits - current.AccumRedBits) *
+				(desired.AccumRedBits - current.AccumRedBits)
 		}
 
-		if desired.accumGreenBits != DontCare {
-			extraDiff += (desired.accumGreenBits - current.accumGreenBits) *
-				(desired.accumGreenBits - current.accumGreenBits)
+		if desired.AccumGreenBits != DontCare {
+			extraDiff += (desired.AccumGreenBits - current.AccumGreenBits) *
+				(desired.AccumGreenBits - current.AccumGreenBits)
 		}
 
-		if desired.accumBlueBits != DontCare {
-			extraDiff += (desired.accumBlueBits - current.accumBlueBits) *
-				(desired.accumBlueBits - current.accumBlueBits)
+		if desired.AccumBlueBits != DontCare {
+			extraDiff += (desired.AccumBlueBits - current.AccumBlueBits) *
+				(desired.AccumBlueBits - current.AccumBlueBits)
 		}
 
-		if desired.accumAlphaBits != DontCare {
-			extraDiff += (desired.accumAlphaBits - current.accumAlphaBits) *
-				(desired.accumAlphaBits - current.accumAlphaBits)
+		if desired.AccumAlphaBits != DontCare {
+			extraDiff += (desired.AccumAlphaBits - current.AccumAlphaBits) *
+				(desired.AccumAlphaBits - current.AccumAlphaBits)
 		}
 
-		if desired.samples != DontCare {
-			extraDiff += (desired.samples - current.samples) *
-				(desired.samples - current.samples)
+		if desired.Samples != DontCare {
+			extraDiff += (desired.Samples - current.Samples) *
+				(desired.Samples - current.Samples)
 		}
 
-		if desired.sRGB && !current.sRGB {
+		if desired.SRGB && !current.SRGB {
 			extraDiff++
 		}
 
@@ -1321,7 +1321,7 @@ func (c *glContext) ExtensionSupported(extension string) (bool, error) {
 	// 	return false, fmt.Errorf("glfw: cannot query extension without a current OpenGL or OpenGL ES context %w", NoCurrentContext)
 	// }
 
-	if c.context.major >= 3 {
+	if c.context.Fajor >= 3 {
 		// Check if extension is in the modern OpenGL extensions string list
 
 		glGetIntegerv := gl.GetProcAddressWGL("glGetIntegerv")

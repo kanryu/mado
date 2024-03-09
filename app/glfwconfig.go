@@ -12,7 +12,7 @@ const (
 	GLFW_TRUE  = true
 	GLFW_FALSE = false
 
-	GLFW_DONT_CARE              = 0
+	GLFW_DONT_CARE              = -1
 	GLFW_NO_API                 = 0
 	GLFW_OPENGL_API             = 0x00030001
 	GLFW_OPENGL_ES_API          = 0x00030002
@@ -58,71 +58,79 @@ type initconfig struct {
 }
 
 type WndConfig struct {
-	width            int
-	height           int
-	title            string
-	resizable        bool
-	visible          bool
-	decorated        bool
-	focused          bool
-	autoIconify      bool
-	floating         bool
-	maximized        bool
-	centerCursor     bool
-	focusOnShow      bool
-	mousePassthrough bool
-	scaleToMonitor   bool
+	Width            int
+	Height           int
+	Title            string
+	Resizable        bool
+	Visible          bool
+	Decorated        bool
+	Focused          bool
+	AutoIconify      bool
+	Floating         bool
+	Maximized        bool
+	CenterCursor     bool
+	FocusOnShow      bool
+	MousePassthrough bool
+	ScaleToMonitor   bool
+	Ns               struct {
+		Retina    bool
+		FrameName string
+	}
+	X11 struct {
+		ClassName    string
+		InstanceName string
+	}
 }
 
 type CtxConfig struct {
 	Client     int
-	source     int
+	Source     int
 	Major      int
 	Minor      int
-	forward    bool
-	debug      bool
-	noerror    bool
-	profile    int
-	robustness int
-	release    int
+	Forward    bool
+	Debug      bool
+	Noerror    bool
+	Profile    int
+	Robustness int
+	Release    int
 	share      *Window
-	nsgl       struct {
-		offline bool
+	Nsgl       struct {
+		Offline bool
 	}
 }
 
 type FbConfig struct {
-	redBits        int
-	greenBits      int
-	blueBits       int
-	alphaBits      int
-	depthBits      int
-	stencilBits    int
-	accumRedBits   int
-	accumGreenBits int
-	accumBlueBits  int
-	accumAlphaBits int
-	auxBuffers     int
-	stereo         bool
-	samples        int
-	sRGB           bool
-	doublebuffer   bool
-	transparent    bool
-	handle         uintptr
+	RedBits        int
+	GreenBits      int
+	BlueBits       int
+	AlphaBits      int
+	DepthBits      int
+	StencilBits    int
+	AccumRedBits   int
+	AccumGreenBits int
+	AccumBlueBits  int
+	AccumAlphaBits int
+	AuxBuffers     int
+	Stereo         bool
+	Samples        int
+	SRGB           bool
+	Doublebuffer   bool
+	Transparent    bool
+	Handle         uintptr
 }
 
-type context struct {
-	client     int
-	source     int
-	major      int
-	minor      int
-	revision   int
-	forward    bool
-	debug      bool
-	noerror    bool
-	profile    int
-	robustness int
-	release    int
+type GlfwContext struct {
+	Client     int
+	Source     int
+	Fajor      int
+	Minor      int
+	Revision   int
+	Forward    bool
+	Debug      bool
+	Noerror    bool
+	Profile    int
+	Robustness int
+	Release    int
 
 	// TODO: Put these functions in an interface type.
 	makeCurrent        func(*Window) error
@@ -132,7 +140,7 @@ type context struct {
 	getProcAddress     func(string) uintptr
 	destroy            func(*Window) error
 
-	platform PlatformContextState
+	Platform PlatformContextState
 }
 
 type Library struct {
@@ -141,10 +149,10 @@ type Library struct {
 
 	Hints struct {
 		init        initconfig
-		framebuffer FbConfig
-		window      WndConfig
+		Framebuffer FbConfig
+		Window      WndConfig
 		Context     CtxConfig
-		refreshRate int
+		RefreshRate int
 	}
 
 	errors []error // TODO: Check the error at polling?
@@ -171,16 +179,33 @@ func intToBool(x int) bool {
 }
 
 func glfwconfiginit() {
+	// The default is OpenGL with minimum version 1.0
+	GlfwConfig.Hints.Context.Client = GLFW_OPENGL_API
+	GlfwConfig.Hints.Context.Source = NativeContextAPI
 	GlfwConfig.Hints.Context.Major = 2
 	GlfwConfig.Hints.Context.Minor = 0
-	GlfwConfig.Hints.Context.Client = GLFW_OPENGL_API
-	GlfwConfig.Hints.Context.source = NativeContextAPI
 
-	GlfwConfig.Hints.framebuffer.redBits = 8
-	GlfwConfig.Hints.framebuffer.greenBits = 8
-	GlfwConfig.Hints.framebuffer.blueBits = 8
-	GlfwConfig.Hints.framebuffer.alphaBits = 8
-	GlfwConfig.Hints.framebuffer.depthBits = 24
-	GlfwConfig.Hints.framebuffer.stencilBits = 8
-	GlfwConfig.Hints.framebuffer.doublebuffer = GLFW_TRUE
+	// The default is a focused, visible, resizable window with decorations
+	GlfwConfig.Hints.Window.Resizable = true
+	GlfwConfig.Hints.Window.Decorated = true
+	GlfwConfig.Hints.Window.Focused = true
+	GlfwConfig.Hints.Window.AutoIconify = true
+	GlfwConfig.Hints.Window.Floating = true
+	GlfwConfig.Hints.Window.Maximized = true
+	GlfwConfig.Hints.Window.Visible = true
+
+	// The default is 24 bits of color, 24 bits of depth and 8 bits of stencil,
+	GlfwConfig.Hints.Framebuffer.RedBits = 8
+	GlfwConfig.Hints.Framebuffer.GreenBits = 8
+	GlfwConfig.Hints.Framebuffer.BlueBits = 8
+	GlfwConfig.Hints.Framebuffer.AlphaBits = 8
+	GlfwConfig.Hints.Framebuffer.DepthBits = 24
+	GlfwConfig.Hints.Framebuffer.StencilBits = 8
+	GlfwConfig.Hints.Framebuffer.Doublebuffer = GLFW_TRUE
+
+	// The default is to select the highest available refresh rate
+	GlfwConfig.Hints.RefreshRate = GLFW_DONT_CARE
+
+	// The default is to use full Retina resolution framebuffers
+	GlfwConfig.Hints.Window.Ns.Retina = GLFW_TRUE
 }
