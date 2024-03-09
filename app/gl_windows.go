@@ -8,8 +8,11 @@ package app
 import (
 	"fmt"
 	"math"
+	"regexp"
 	"runtime"
+	"strconv"
 	"strings"
+	"syscall"
 
 	"unsafe"
 
@@ -17,7 +20,7 @@ import (
 	"github.com/kanryu/mado/app/internal/windows"
 	"github.com/kanryu/mado/gpu"
 	"github.com/kanryu/mado/internal/gl"
-	syscall "golang.org/x/sys/windows"
+	winsyscall "golang.org/x/sys/windows"
 )
 
 type (
@@ -49,230 +52,232 @@ const (
 
 	intSize = 32 << (^uint(0) >> 63)
 
-	_BI_BITFIELDS                                                = 3
-	_CCHDEVICENAME                                               = 32
-	_CCHFORMNAME                                                 = 32
-	_CDS_TEST                                                    = 0x00000002
-	_CDS_FULLSCREEN                                              = 0x00000004
-	_CS_HREDRAW                                                  = 0x00000002
-	_CS_OWNDC                                                    = 0x00000020
-	_CS_VREDRAW                                                  = 0x00000001
-	_CW_USEDEFAULT                                               = int32(^0x7fffffff)
-	_DBT_DEVTYP_DEVICEINTERFACE                                  = 0x00000005
-	_DEVICE_NOTIFY_WINDOW_HANDLE                                 = 0x00000000
-	_DIB_RGB_COLORS                                              = 0
-	_DISP_CHANGE_SUCCESSFUL                                      = 0
-	_DISP_CHANGE_RESTART                                         = 1
-	_DISP_CHANGE_FAILED                                          = -1
-	_DISP_CHANGE_BADMODE                                         = -2
-	_DISP_CHANGE_NOTUPDATED                                      = -3
-	_DISP_CHANGE_BADFLAGS                                        = -4
-	_DISP_CHANGE_BADPARAM                                        = -5
-	_DISP_CHANGE_BADDUALVIEW                                     = -6
-	_DISPLAY_DEVICE_ACTIVE                                       = 0x00000001
-	_DISPLAY_DEVICE_MODESPRUNED                                  = 0x08000000
-	_DISPLAY_DEVICE_PRIMARY_DEVICE                               = 0x00000004
-	_DM_BITSPERPEL                                               = 0x00040000
-	_DM_PELSWIDTH                                                = 0x00080000
-	_DM_PELSHEIGHT                                               = 0x00100000
-	_DM_DISPLAYFREQUENCY                                         = 0x00400000
-	_DWM_BB_BLURREGION                                           = 0x00000002
-	_DWM_BB_ENABLE                                               = 0x00000001
-	_EDS_ROTATEDMODE                                             = 0x00000004
-	_ENUM_CURRENT_SETTINGS                        uint32         = 0xffffffff
-	_GCLP_HICON                                                  = -14
-	_GCLP_HICONSM                                                = -34
-	_GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS                      = 0x00000004
-	_GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT                = 0x00000002
-	_GWL_EXSTYLE                                                 = -20
-	_GWL_STYLE                                                   = -16
-	_HTCLIENT                                                    = 1
-	_HORZSIZE                                                    = 4
-	_HWND_NOTOPMOST                               syscall.Handle = (1 << intSize) - 2
-	_HWND_TOP                                     syscall.Handle = 0
-	_HWND_TOPMOST                                 syscall.Handle = (1 << intSize) - 1
-	_ICON_BIG                                                    = 1
-	_ICON_SMALL                                                  = 0
-	_IDC_ARROW                                                   = 32512
-	_IDI_APPLICATION                                             = 32512
-	_IMAGE_CURSOR                                                = 2
-	_IMAGE_ICON                                                  = 1
-	_KF_ALTDOWN                                                  = 0x2000
-	_KF_DLGMODE                                                  = 0x0800
-	_KF_EXTENDED                                                 = 0x0100
-	_KF_MENUMODE                                                 = 0x1000
-	_KF_REPEAT                                                   = 0x4000
-	_KF_UP                                                       = 0x8000
-	_LOGPIXELSX                                                  = 88
-	_LOGPIXELSY                                                  = 90
-	_LR_DEFAULTSIZE                                              = 0x0040
-	_LR_SHARED                                                   = 0x8000
-	_LWA_ALPHA                                                   = 0x00000002
-	_MAPVK_VK_TO_VSC                                             = 0
-	_MAPVK_VSC_TO_VK                                             = 1
-	_MONITOR_DEFAULTTONEAREST                                    = 0x00000002
-	_MOUSE_MOVE_ABSOLUTE                                         = 0x01
-	_MSGFLT_ALLOW                                                = 1
-	_OCR_CROSS                                                   = 32515
-	_OCR_HAND                                                    = 32649
-	_OCR_IBEAM                                                   = 32513
-	_OCR_NO                                                      = 32648
-	_OCR_NORMAL                                                  = 32512
-	_OCR_SIZEALL                                                 = 32646
-	_OCR_SIZENESW                                                = 32643
-	_OCR_SIZENS                                                  = 32645
-	_OCR_SIZENWSE                                                = 32642
-	_OCR_SIZEWE                                                  = 32644
-	_PM_NOREMOVE                                                 = 0x0000
-	_PM_REMOVE                                                   = 0x0001
-	_PFD_DRAW_TO_WINDOW                                          = 0x00000004
-	_PFD_DOUBLEBUFFER                                            = 0x00000001
-	_PFD_GENERIC_ACCELERATED                                     = 0x00001000
-	_PFD_GENERIC_FORMAT                                          = 0x00000040
-	_PFD_STEREO                                                  = 0x00000002
-	_PFD_SUPPORT_OPENGL                                          = 0x00000020
-	_PFD_TYPE_RGBA                                               = 0
-	_QS_ALLEVENTS                                                = _QS_INPUT | _QS_POSTMESSAGE | _QS_TIMER | _QS_PAINT | _QS_HOTKEY
-	_QS_HOTKEY                                                   = 0x0080
-	_QS_INPUT                                                    = _QS_MOUSE | _QS_KEY | _QS_RAWINPUT
-	_QS_KEY                                                      = 0x0001
-	_QS_MOUSE                                                    = _QS_MOUSEMOVE | _QS_MOUSEBUTTON
-	_QS_MOUSEBUTTON                                              = 0x0004
-	_QS_MOUSEMOVE                                                = 0x0002
-	_QS_PAINT                                                    = 0x0020
-	_QS_POSTMESSAGE                                              = 0x0008
-	_QS_RAWINPUT                                                 = 0x0400
-	_QS_TIMER                                                    = 0x0010
-	_RID_INPUT                                                   = 0x10000003
-	_RIDEV_REMOVE                                                = 0x00000001
-	_SC_KEYMENU                                                  = 0xf100
-	_SC_MONITORPOWER                                             = 0xf170
-	_SC_SCREENSAVE                                               = 0xf140
-	_SIZE_MAXIMIZED                                              = 2
-	_SIZE_MINIMIZED                                              = 1
-	_SIZE_RESTORED                                               = 0
-	_SM_CXICON                                                   = 11
-	_SM_CXSMICON                                                 = 49
-	_SM_CYCAPTION                                                = 4
-	_SM_CYICON                                                   = 12
-	_SM_CYSMICON                                                 = 50
-	_SPI_GETFOREGROUNDLOCKTIMEOUT                                = 0x2000
-	_SPI_GETMOUSETRAILS                                          = 94
-	_SPI_SETFOREGROUNDLOCKTIMEOUT                                = 0x2001
-	_SPI_SETMOUSETRAILS                                          = 93
-	_SPIF_SENDCHANGE                                             = _SPIF_SENDWININICHANGE
-	_SPIF_SENDWININICHANGE                                       = 2
-	_SW_HIDE                                                     = 0
-	_SW_MAXIMIZE                                                 = _SW_SHOWMAXIMIZED
-	_SW_MINIMIZE                                                 = 6
-	_SW_RESTORE                                                  = 9
-	_SW_SHOWNA                                                   = 8
-	_SW_SHOWMAXIMIZED                                            = 3
-	_SWP_FRAMECHANGED                                            = 0x0020
-	_SWP_NOACTIVATE                                              = 0x0010
-	_SWP_NOCOPYBITS                                              = 0x0100
-	_SWP_NOMOVE                                                  = 0x0002
-	_SWP_NOOWNERZORDER                                           = 0x0200
-	_SWP_NOSIZE                                                  = 0x0001
-	_SWP_NOZORDER                                                = 0x0004
-	_SWP_SHOWWINDOW                                              = 0x0040
-	_TLS_OUT_OF_INDEXES                           uint32         = 0xffffffff
-	_TME_LEAVE                                                   = 0x00000002
-	_UNICODE_NOCHAR                                              = 0xffff
-	_USER_DEFAULT_SCREEN_DPI                                     = 96
-	_VERTSIZE                                                    = 6
-	_VK_ADD                                                      = 0x6B
-	_VK_CAPITAL                                                  = 0x14
-	_VK_CONTROL                                                  = 0x11
-	_VK_DECIMAL                                                  = 0x6E
-	_VK_DIVIDE                                                   = 0x6F
-	_VK_LSHIFT                                                   = 0xA0
-	_VK_LWIN                                                     = 0x5B
-	_VK_MENU                                                     = 0x12
-	_VK_MULTIPLY                                                 = 0x6A
-	_VK_NUMLOCK                                                  = 0x90
-	_VK_NUMPAD0                                                  = 0x60
-	_VK_NUMPAD1                                                  = 0x61
-	_VK_NUMPAD2                                                  = 0x62
-	_VK_NUMPAD3                                                  = 0x63
-	_VK_NUMPAD4                                                  = 0x64
-	_VK_NUMPAD5                                                  = 0x65
-	_VK_NUMPAD6                                                  = 0x66
-	_VK_NUMPAD7                                                  = 0x67
-	_VK_NUMPAD8                                                  = 0x68
-	_VK_NUMPAD9                                                  = 0x69
-	_VK_PROCESSKEY                                               = 0xE5
-	_VK_RSHIFT                                                   = 0xA1
-	_VK_RWIN                                                     = 0x5C
-	_VK_SHIFT                                                    = 0x10
-	_VK_SNAPSHOT                                                 = 0x2C
-	_VK_SUBTRACT                                                 = 0x6D
-	_WAIT_FAILED                                                 = 0xffffffff
-	_WHEEL_DELTA                                                 = 120
-	_WGL_ACCUM_BITS_ARB                                          = 0x201D
-	_WGL_ACCELERATION_ARB                                        = 0x2003
-	_WGL_ACCUM_ALPHA_BITS_ARB                                    = 0x2021
-	_WGL_ACCUM_BLUE_BITS_ARB                                     = 0x2020
-	_WGL_ACCUM_GREEN_BITS_ARB                                    = 0x201F
-	_WGL_ACCUM_RED_BITS_ARB                                      = 0x201E
-	_WGL_AUX_BUFFERS_ARB                                         = 0x2024
-	_WGL_ALPHA_BITS_ARB                                          = 0x201B
-	_WGL_ALPHA_SHIFT_ARB                                         = 0x201C
-	_WGL_BLUE_BITS_ARB                                           = 0x2019
-	_WGL_BLUE_SHIFT_ARB                                          = 0x201A
-	_WGL_COLOR_BITS_ARB                                          = 0x2014
-	_WGL_COLORSPACE_EXT                                          = 0x309D
-	_WGL_COLORSPACE_SRGB_EXT                                     = 0x3089
-	_WGL_CONTEXT_COMPATIBILITY_PROFILE_BIT_ARB                   = 0x00000002
-	_WGL_CONTEXT_CORE_PROFILE_BIT_ARB                            = 0x00000001
-	_WGL_CONTEXT_DEBUG_BIT_ARB                                   = 0x0001
-	_WGL_CONTEXT_ES2_PROFILE_BIT_EXT                             = 0x00000004
-	_WGL_CONTEXT_FLAGS_ARB                                       = 0x2094
-	_WGL_CONTEXT_FORWARD_COMPATIBLE_BIT_ARB                      = 0x0002
-	_WGL_CONTEXT_MAJOR_VERSION_ARB                               = 0x2091
-	_WGL_CONTEXT_MINOR_VERSION_ARB                               = 0x2092
-	_WGL_CONTEXT_OPENGL_NO_ERROR_ARB                             = 0x31B3
-	_WGL_CONTEXT_PROFILE_MASK_ARB                                = 0x9126
-	_WGL_CONTEXT_RELEASE_BEHAVIOR_ARB                            = 0x2097
-	_WGL_CONTEXT_RELEASE_BEHAVIOR_NONE_ARB                       = 0x0000
-	_WGL_CONTEXT_RELEASE_BEHAVIOR_FLUSH_ARB                      = 0x2098
-	_WGL_CONTEXT_RESET_NOTIFICATION_STRATEGY_ARB                 = 0x8256
-	_WGL_CONTEXT_ROBUST_ACCESS_BIT_ARB                           = 0x00000004
-	_WGL_DEPTH_BITS_ARB                                          = 0x2022
-	_WGL_DRAW_TO_BITMAP_ARB                                      = 0x2002
-	_WGL_DRAW_TO_WINDOW_ARB                                      = 0x2001
-	_WGL_DOUBLE_BUFFER_ARB                                       = 0x2011
-	_WGL_FRAMEBUFFER_SRGB_CAPABLE_ARB                            = 0x20A9
-	_WGL_GREEN_BITS_ARB                                          = 0x2017
-	_WGL_GREEN_SHIFT_ARB                                         = 0x2018
-	_WGL_LOSE_CONTEXT_ON_RESET_ARB                               = 0x8252
-	_WGL_NEED_PALETTE_ARB                                        = 0x2004
-	_WGL_NEED_SYSTEM_PALETTE_ARB                                 = 0x2005
-	_WGL_NO_ACCELERATION_ARB                                     = 0x2025
-	_WGL_NO_RESET_NOTIFICATION_ARB                               = 0x8261
-	_WGL_NUMBER_OVERLAYS_ARB                                     = 0x2008
-	_WGL_NUMBER_PIXEL_FORMATS_ARB                                = 0x2000
-	_WGL_NUMBER_UNDERLAYS_ARB                                    = 0x2009
-	_WGL_PIXEL_TYPE_ARB                                          = 0x2013
-	_WGL_RED_BITS_ARB                                            = 0x2015
-	_WGL_RED_SHIFT_ARB                                           = 0x2016
-	_WGL_SAMPLES_ARB                                             = 0x2042
-	_WGL_SHARE_ACCUM_ARB                                         = 0x200E
-	_WGL_SHARE_DEPTH_ARB                                         = 0x200C
-	_WGL_SHARE_STENCIL_ARB                                       = 0x200D
-	_WGL_STENCIL_BITS_ARB                                        = 0x2023
-	_WGL_STEREO_ARB                                              = 0x2012
-	_WGL_SUPPORT_GDI_ARB                                         = 0x200F
-	_WGL_SUPPORT_OPENGL_ARB                                      = 0x2010
-	_WGL_SWAP_LAYER_BUFFERS_ARB                                  = 0x2006
-	_WGL_SWAP_METHOD_ARB                                         = 0x2007
-	_WGL_TRANSPARENT_ARB                                         = 0x200A
-	_WGL_TRANSPARENT_ALPHA_VALUE_ARB                             = 0x203A
-	_WGL_TRANSPARENT_BLUE_VALUE_ARB                              = 0x2039
-	_WGL_TRANSPARENT_GREEN_VALUE_ARB                             = 0x2038
-	_WGL_TRANSPARENT_INDEX_VALUE_ARB                             = 0x203B
-	_WGL_TRANSPARENT_RED_VALUE_ARB                               = 0x2037
-	_WGL_TYPE_RGBA_ARB                                           = 0x202B
+	_BI_BITFIELDS                                                   = 3
+	_CCHDEVICENAME                                                  = 32
+	_CCHFORMNAME                                                    = 32
+	_CDS_TEST                                                       = 0x00000002
+	_CDS_FULLSCREEN                                                 = 0x00000004
+	_CS_HREDRAW                                                     = 0x00000002
+	_CS_OWNDC                                                       = 0x00000020
+	_CS_VREDRAW                                                     = 0x00000001
+	_CW_USEDEFAULT                                                  = int32(^0x7fffffff)
+	_DBT_DEVTYP_DEVICEINTERFACE                                     = 0x00000005
+	_DEVICE_NOTIFY_WINDOW_HANDLE                                    = 0x00000000
+	_DIB_RGB_COLORS                                                 = 0
+	_DISP_CHANGE_SUCCESSFUL                                         = 0
+	_DISP_CHANGE_RESTART                                            = 1
+	_DISP_CHANGE_FAILED                                             = -1
+	_DISP_CHANGE_BADMODE                                            = -2
+	_DISP_CHANGE_NOTUPDATED                                         = -3
+	_DISP_CHANGE_BADFLAGS                                           = -4
+	_DISP_CHANGE_BADPARAM                                           = -5
+	_DISP_CHANGE_BADDUALVIEW                                        = -6
+	_DISPLAY_DEVICE_ACTIVE                                          = 0x00000001
+	_DISPLAY_DEVICE_MODESPRUNED                                     = 0x08000000
+	_DISPLAY_DEVICE_PRIMARY_DEVICE                                  = 0x00000004
+	_DM_BITSPERPEL                                                  = 0x00040000
+	_DM_PELSWIDTH                                                   = 0x00080000
+	_DM_PELSHEIGHT                                                  = 0x00100000
+	_DM_DISPLAYFREQUENCY                                            = 0x00400000
+	_DWM_BB_BLURREGION                                              = 0x00000002
+	_DWM_BB_ENABLE                                                  = 0x00000001
+	_EDS_ROTATEDMODE                                                = 0x00000004
+	_ENUM_CURRENT_SETTINGS                        uint32            = 0xffffffff
+	_GCLP_HICON                                                     = -14
+	_GCLP_HICONSM                                                   = -34
+	_GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS                         = 0x00000004
+	_GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT                   = 0x00000002
+	_GWL_EXSTYLE                                                    = -20
+	_GWL_STYLE                                                      = -16
+	_HTCLIENT                                                       = 1
+	_HORZSIZE                                                       = 4
+	_HWND_NOTOPMOST                               winsyscall.Handle = (1 << intSize) - 2
+	_HWND_TOP                                     winsyscall.Handle = 0
+	_HWND_TOPMOST                                 winsyscall.Handle = (1 << intSize) - 1
+	_ICON_BIG                                                       = 1
+	_ICON_SMALL                                                     = 0
+	_IDC_ARROW                                                      = 32512
+	_IDI_APPLICATION                                                = 32512
+	_IMAGE_CURSOR                                                   = 2
+	_IMAGE_ICON                                                     = 1
+	_KF_ALTDOWN                                                     = 0x2000
+	_KF_DLGMODE                                                     = 0x0800
+	_KF_EXTENDED                                                    = 0x0100
+	_KF_MENUMODE                                                    = 0x1000
+	_KF_REPEAT                                                      = 0x4000
+	_KF_UP                                                          = 0x8000
+	_LOGPIXELSX                                                     = 88
+	_LOGPIXELSY                                                     = 90
+	_LR_DEFAULTSIZE                                                 = 0x0040
+	_LR_SHARED                                                      = 0x8000
+	_LWA_ALPHA                                                      = 0x00000002
+	_MAPVK_VK_TO_VSC                                                = 0
+	_MAPVK_VSC_TO_VK                                                = 1
+	_MONITOR_DEFAULTTONEAREST                                       = 0x00000002
+	_MOUSE_MOVE_ABSOLUTE                                            = 0x01
+	_MSGFLT_ALLOW                                                   = 1
+	_OCR_CROSS                                                      = 32515
+	_OCR_HAND                                                       = 32649
+	_OCR_IBEAM                                                      = 32513
+	_OCR_NO                                                         = 32648
+	_OCR_NORMAL                                                     = 32512
+	_OCR_SIZEALL                                                    = 32646
+	_OCR_SIZENESW                                                   = 32643
+	_OCR_SIZENS                                                     = 32645
+	_OCR_SIZENWSE                                                   = 32642
+	_OCR_SIZEWE                                                     = 32644
+	_PM_NOREMOVE                                                    = 0x0000
+	_PM_REMOVE                                                      = 0x0001
+	_PFD_DRAW_TO_WINDOW                                             = 0x00000004
+	_PFD_DOUBLEBUFFER                                               = 0x00000001
+	_PFD_GENERIC_ACCELERATED                                        = 0x00001000
+	_PFD_GENERIC_FORMAT                                             = 0x00000040
+	_PFD_STEREO                                                     = 0x00000002
+	_PFD_SUPPORT_OPENGL                                             = 0x00000020
+	_PFD_TYPE_RGBA                                                  = 0
+	_QS_ALLEVENTS                                                   = _QS_INPUT | _QS_POSTMESSAGE | _QS_TIMER | _QS_PAINT | _QS_HOTKEY
+	_QS_HOTKEY                                                      = 0x0080
+	_QS_INPUT                                                       = _QS_MOUSE | _QS_KEY | _QS_RAWINPUT
+	_QS_KEY                                                         = 0x0001
+	_QS_MOUSE                                                       = _QS_MOUSEMOVE | _QS_MOUSEBUTTON
+	_QS_MOUSEBUTTON                                                 = 0x0004
+	_QS_MOUSEMOVE                                                   = 0x0002
+	_QS_PAINT                                                       = 0x0020
+	_QS_POSTMESSAGE                                                 = 0x0008
+	_QS_RAWINPUT                                                    = 0x0400
+	_QS_TIMER                                                       = 0x0010
+	_RID_INPUT                                                      = 0x10000003
+	_RIDEV_REMOVE                                                   = 0x00000001
+	_SC_KEYMENU                                                     = 0xf100
+	_SC_MONITORPOWER                                                = 0xf170
+	_SC_SCREENSAVE                                                  = 0xf140
+	_SIZE_MAXIMIZED                                                 = 2
+	_SIZE_MINIMIZED                                                 = 1
+	_SIZE_RESTORED                                                  = 0
+	_SM_CXICON                                                      = 11
+	_SM_CXSMICON                                                    = 49
+	_SM_CYCAPTION                                                   = 4
+	_SM_CYICON                                                      = 12
+	_SM_CYSMICON                                                    = 50
+	_SPI_GETFOREGROUNDLOCKTIMEOUT                                   = 0x2000
+	_SPI_GETMOUSETRAILS                                             = 94
+	_SPI_SETFOREGROUNDLOCKTIMEOUT                                   = 0x2001
+	_SPI_SETMOUSETRAILS                                             = 93
+	_SPIF_SENDCHANGE                                                = _SPIF_SENDWININICHANGE
+	_SPIF_SENDWININICHANGE                                          = 2
+	_SW_HIDE                                                        = 0
+	_SW_MAXIMIZE                                                    = _SW_SHOWMAXIMIZED
+	_SW_MINIMIZE                                                    = 6
+	_SW_RESTORE                                                     = 9
+	_SW_SHOWNA                                                      = 8
+	_SW_SHOWMAXIMIZED                                               = 3
+	_SWP_FRAMECHANGED                                               = 0x0020
+	_SWP_NOACTIVATE                                                 = 0x0010
+	_SWP_NOCOPYBITS                                                 = 0x0100
+	_SWP_NOMOVE                                                     = 0x0002
+	_SWP_NOOWNERZORDER                                              = 0x0200
+	_SWP_NOSIZE                                                     = 0x0001
+	_SWP_NOZORDER                                                   = 0x0004
+	_SWP_SHOWWINDOW                                                 = 0x0040
+	_TLS_OUT_OF_INDEXES                           uint32            = 0xffffffff
+	_TME_LEAVE                                                      = 0x00000002
+	_UNICODE_NOCHAR                                                 = 0xffff
+	_USER_DEFAULT_SCREEN_DPI                                        = 96
+	_VERTSIZE                                                       = 6
+	_VK_ADD                                                         = 0x6B
+	_VK_CAPITAL                                                     = 0x14
+	_VK_CONTROL                                                     = 0x11
+	_VK_DECIMAL                                                     = 0x6E
+	_VK_DIVIDE                                                      = 0x6F
+	_VK_LSHIFT                                                      = 0xA0
+	_VK_LWIN                                                        = 0x5B
+	_VK_MENU                                                        = 0x12
+	_VK_MULTIPLY                                                    = 0x6A
+	_VK_NUMLOCK                                                     = 0x90
+	_VK_NUMPAD0                                                     = 0x60
+	_VK_NUMPAD1                                                     = 0x61
+	_VK_NUMPAD2                                                     = 0x62
+	_VK_NUMPAD3                                                     = 0x63
+	_VK_NUMPAD4                                                     = 0x64
+	_VK_NUMPAD5                                                     = 0x65
+	_VK_NUMPAD6                                                     = 0x66
+	_VK_NUMPAD7                                                     = 0x67
+	_VK_NUMPAD8                                                     = 0x68
+	_VK_NUMPAD9                                                     = 0x69
+	_VK_PROCESSKEY                                                  = 0xE5
+	_VK_RSHIFT                                                      = 0xA1
+	_VK_RWIN                                                        = 0x5C
+	_VK_SHIFT                                                       = 0x10
+	_VK_SNAPSHOT                                                    = 0x2C
+	_VK_SUBTRACT                                                    = 0x6D
+	_WAIT_FAILED                                                    = 0xffffffff
+	_WHEEL_DELTA                                                    = 120
+	_WGL_ACCUM_BITS_ARB                                             = 0x201D
+	_WGL_ACCELERATION_ARB                                           = 0x2003
+	_WGL_ACCUM_ALPHA_BITS_ARB                                       = 0x2021
+	_WGL_ACCUM_BLUE_BITS_ARB                                        = 0x2020
+	_WGL_ACCUM_GREEN_BITS_ARB                                       = 0x201F
+	_WGL_ACCUM_RED_BITS_ARB                                         = 0x201E
+	_WGL_AUX_BUFFERS_ARB                                            = 0x2024
+	_WGL_ALPHA_BITS_ARB                                             = 0x201B
+	_WGL_ALPHA_SHIFT_ARB                                            = 0x201C
+	_WGL_BLUE_BITS_ARB                                              = 0x2019
+	_WGL_BLUE_SHIFT_ARB                                             = 0x201A
+	_WGL_COLOR_BITS_ARB                                             = 0x2014
+	_WGL_COLORSPACE_EXT                                             = 0x309D
+	_WGL_COLORSPACE_SRGB_EXT                                        = 0x3089
+	_WGL_CONTEXT_COMPATIBILITY_PROFILE_BIT_ARB                      = 0x00000002
+	_WGL_CONTEXT_CORE_PROFILE_BIT_ARB                               = 0x00000001
+	_WGL_CONTEXT_DEBUG_BIT_ARB                                      = 0x0001
+	_WGL_CONTEXT_ES2_PROFILE_BIT_EXT                                = 0x00000004
+	_WGL_CONTEXT_FLAGS_ARB                                          = 0x2094
+	_WGL_CONTEXT_FORWARD_COMPATIBLE_BIT_ARB                         = 0x0002
+	_WGL_CONTEXT_MAJOR_VERSION_ARB                                  = 0x2091
+	_WGL_CONTEXT_MINOR_VERSION_ARB                                  = 0x2092
+	_WGL_CONTEXT_OPENGL_NO_ERROR_ARB                                = 0x31B3
+	_WGL_CONTEXT_PROFILE_MASK_ARB                                   = 0x9126
+	_WGL_CONTEXT_RELEASE_BEHAVIOR_ARB                               = 0x2097
+	_WGL_CONTEXT_RELEASE_BEHAVIOR_NONE_ARB                          = 0x0000
+	_WGL_CONTEXT_RELEASE_BEHAVIOR_FLUSH_ARB                         = 0x2098
+	_WGL_CONTEXT_RESET_NOTIFICATION_STRATEGY_ARB                    = 0x8256
+	_WGL_CONTEXT_ROBUST_ACCESS_BIT_ARB                              = 0x00000004
+	_WGL_DEPTH_BITS_ARB                                             = 0x2022
+	_WGL_DRAW_TO_BITMAP_ARB                                         = 0x2002
+	_WGL_DRAW_TO_WINDOW_ARB                                         = 0x2001
+	_WGL_DOUBLE_BUFFER_ARB                                          = 0x2011
+	_WGL_FRAMEBUFFER_SRGB_CAPABLE_ARB                               = 0x20A9
+	_WGL_GREEN_BITS_ARB                                             = 0x2017
+	_WGL_GREEN_SHIFT_ARB                                            = 0x2018
+	_WGL_LOSE_CONTEXT_ON_RESET_ARB                                  = 0x8252
+	_WGL_NEED_PALETTE_ARB                                           = 0x2004
+	_WGL_NEED_SYSTEM_PALETTE_ARB                                    = 0x2005
+	_WGL_NO_ACCELERATION_ARB                                        = 0x2025
+	_WGL_NO_RESET_NOTIFICATION_ARB                                  = 0x8261
+	_WGL_NUMBER_OVERLAYS_ARB                                        = 0x2008
+	_WGL_NUMBER_PIXEL_FORMATS_ARB                                   = 0x2000
+	_WGL_NUMBER_UNDERLAYS_ARB                                       = 0x2009
+	_WGL_PIXEL_TYPE_ARB                                             = 0x2013
+	_WGL_RED_BITS_ARB                                               = 0x2015
+	_WGL_RED_SHIFT_ARB                                              = 0x2016
+	_WGL_SAMPLES_ARB                                                = 0x2042
+	_WGL_SHARE_ACCUM_ARB                                            = 0x200E
+	_WGL_SHARE_DEPTH_ARB                                            = 0x200C
+	_WGL_SHARE_STENCIL_ARB                                          = 0x200D
+	_WGL_STENCIL_BITS_ARB                                           = 0x2023
+	_WGL_STEREO_ARB                                                 = 0x2012
+	_WGL_SUPPORT_GDI_ARB                                            = 0x200F
+	_WGL_SUPPORT_OPENGL_ARB                                         = 0x2010
+	_WGL_SWAP_LAYER_BUFFERS_ARB                                     = 0x2006
+	_WGL_SWAP_METHOD_ARB                                            = 0x2007
+	_WGL_TRANSPARENT_ARB                                            = 0x200A
+	_WGL_TRANSPARENT_ALPHA_VALUE_ARB                                = 0x203A
+	_WGL_TRANSPARENT_BLUE_VALUE_ARB                                 = 0x2039
+	_WGL_TRANSPARENT_GREEN_VALUE_ARB                                = 0x2038
+	_WGL_TRANSPARENT_INDEX_VALUE_ARB                                = 0x203B
+	_WGL_TRANSPARENT_RED_VALUE_ARB                                  = 0x2037
+	_WGL_TYPE_RGBA_ARB                                              = 0x202B
+
+	EmptyHandle = winsyscall.Handle(0)
 
 	AnyReleaseBehavior   = 0
 	CursorDisabled       = 0x00034003
@@ -295,8 +300,8 @@ const (
 )
 
 type PlatformContextState struct {
-	dc       syscall.Handle
-	handle   syscall.Handle
+	dc       winsyscall.Handle
+	handle   winsyscall.Handle
 	interval int
 }
 
@@ -330,23 +335,51 @@ const (
 	NoWindowContext    = ErrorCode(0x0001000A)
 )
 
+func (e ErrorCode) Error() string {
+	switch e {
+	case NotInitialized:
+		return "the GLFW library is not initialized"
+	case NoCurrentContext:
+		return "there is no current context"
+	case InvalidEnum:
+		return "invalid argument for enum parameter"
+	case InvalidValue:
+		return "invalid value for parameter"
+	case OutOfMemory:
+		return "out of memory"
+	case APIUnavailable:
+		return "the requested API is unavailable"
+	case VersionUnavailable:
+		return "the requested API version is unavailable"
+	case PlatformError:
+		return "a platform-specific error occurred"
+	case FormatUnavailable:
+		return "the requested format is unavailable"
+	case NoWindowContext:
+		return "the specified window has no context"
+	default:
+		return fmt.Sprintf("GLFW error (%d)", e)
+	}
+}
+
 var _ mado.Context = (*glContext)(nil)
 
 type glContext struct {
-	win   *window
-	hglrc syscall.Handle
+	win          *window
+	hglrc        winsyscall.Handle
+	context      context
+	doublebuffer bool
 }
 
 func init() {
-
 	glfwconfiginit()
 	drivers = append(drivers, gpuAPI{
 		priority: 2,
 		name:     "opengl",
 		initializer: func(w *window) (mado.Context, error) {
 			ctx := &glContext{win: w}
-			ctx.MakeCurrentContext()
-			return ctx, nil
+			err := ctx.MakeCurrentContext()
+			return ctx, err
 		},
 	})
 }
@@ -369,15 +402,23 @@ func (c *glContext) MakeCurrentContext() error {
 	// OpenGL contexts are implicit and thread-local. Lock the OS thread.
 	runtime.LockOSThread()
 
-	if err := c.win.initWGL(); err != nil {
+	if err := c.initWGL(); err != nil {
 		panic(err)
+	}
+	if hglrc, err := c.createContextWGL(&GlfwConfig.Hints.Context, &GlfwConfig.Hints.framebuffer); err != nil {
+		panic(err)
+	} else {
+		c.hglrc = hglrc
+	}
+	if err := c.refreshContextAttribs(&GlfwConfig.Hints.Context); err != nil {
+		return err
 	}
 
 	return nil
 }
 
-func (c *glContext) SwapBuffers() {
-	windows.SwapBuffers(c.win.hdc)
+func (c *glContext) SwapBuffers() error {
+	return windows.SwapBuffers(c.win.hdc)
 }
 
 func (c *glContext) SwapInterval(interval int) {
@@ -388,13 +429,28 @@ func (c *glContext) SwapInterval(interval int) {
 	}
 }
 
-func (w *window) initWGL() error {
+func (c *glContext) RenderTarget() (gpu.RenderTarget, error) {
+	return gpu.OpenGLRenderTarget{}, nil
+}
+
+func (c *glContext) API() gpu.API {
+	return gpu.OpenGL{}
+}
+
+func (c *glContext) Present() error {
+	// Assume the caller already locked the context.
+	//C.glFlush(c.glFlush)
+	return nil
+}
+
+func (c *glContext) initWGL() error {
 	if GlfwConfig.PlatformContext.inited {
 		return nil
 	}
 	if err := checkValidContextConfig(&GlfwConfig.Hints.Context); err != nil {
 		return err
 	}
+	createHelperWindow()
 	pfd := windows.PIXELFORMATDESCRIPTOR{
 		Version:   1,
 		Flags:     _PFD_DRAW_TO_WINDOW | _PFD_SUPPORT_OPENGL | _PFD_DOUBLEBUFFER,
@@ -402,16 +458,20 @@ func (w *window) initWGL() error {
 		ColorBits: 24,
 	}
 	pfd.Size = uint16(unsafe.Sizeof(pfd))
-
-	format, err := windows.ChoosePixelFormat(w.hdc, &pfd)
+	dc, err := windows.GetDC(resources.helperHwnd)
 	if err != nil {
 		return err
 	}
-	if err := windows.SetPixelFormat(w.hdc, format, &pfd); err != nil {
+
+	format, err := windows.ChoosePixelFormat(dc, &pfd)
+	if err != nil {
+		return err
+	}
+	if err := windows.SetPixelFormat(dc, format, &pfd); err != nil {
 		return err
 	}
 
-	rc, err := gl.WglCreateContext(w.hdc)
+	rc, err := gl.WglCreateContext(dc)
 	if err != nil {
 		return err
 	}
@@ -419,7 +479,7 @@ func (w *window) initWGL() error {
 	pdc := gl.WglGetCurrentDC()
 	prc := gl.WglGetCurrentContext()
 
-	if err := gl.WglMakeCurrent(w.hdc, rc); err != nil {
+	if err := gl.WglMakeCurrent(dc, rc); err != nil {
 		_ = gl.WglMakeCurrent(pdc, prc)
 		_ = gl.WglDeleteContext(rc)
 		return err
@@ -428,23 +488,23 @@ func (w *window) initWGL() error {
 	// NOTE: Functions must be loaded first as they're needed to retrieve the
 	//       extension string that tells us whether the functions are supported
 	//
-	// Interestingly, gl.WglGetProcAddress might return 0 after extensionSupportedWGL is called.
+	// Interestingly, gl.WglGetProcAddress might return 0 afterc.ExtensionSupportedWGL is called.
 	gl.InitWGLExtensionFunctions()
 
 	// NOTE: gl.Wgl_ARB_extensions_string and gl.Wgl_EXT_extensions_string are not
 	//       checked below as we are already using them
-	GlfwConfig.PlatformContext.ARB_multisample = extensionSupportedWGL("WGL_ARB_multisample")
-	GlfwConfig.PlatformContext.ARB_framebuffer_sRGB = extensionSupportedWGL("WGL_ARB_framebuffer_sRGB")
-	GlfwConfig.PlatformContext.EXT_framebuffer_sRGB = extensionSupportedWGL("WGL_EXT_framebuffer_sRGB")
-	GlfwConfig.PlatformContext.ARB_create_context = extensionSupportedWGL("WGL_ARB_create_context")
-	GlfwConfig.PlatformContext.ARB_create_context_profile = extensionSupportedWGL("WGL_ARB_create_context_profile")
-	GlfwConfig.PlatformContext.EXT_create_context_es2_profile = extensionSupportedWGL("WGL_EXT_create_context_es2_profile")
-	GlfwConfig.PlatformContext.ARB_create_context_robustness = extensionSupportedWGL("WGL_ARB_create_context_robustness")
-	GlfwConfig.PlatformContext.ARB_create_context_no_error = extensionSupportedWGL("WGL_ARB_create_context_no_error")
-	GlfwConfig.PlatformContext.EXT_swap_control = extensionSupportedWGL("WGL_EXT_swap_control")
-	GlfwConfig.PlatformContext.EXT_colorspace = extensionSupportedWGL("WGL_EXT_colorspace")
-	GlfwConfig.PlatformContext.ARB_pixel_format = extensionSupportedWGL("WGL_ARB_pixel_format")
-	GlfwConfig.PlatformContext.ARB_context_flush_control = extensionSupportedWGL("WGL_ARB_context_flush_control")
+	GlfwConfig.PlatformContext.ARB_multisample = ExtensionSupportedWGL("WGL_ARB_multisample")
+	GlfwConfig.PlatformContext.ARB_framebuffer_sRGB = ExtensionSupportedWGL("WGL_ARB_framebuffer_sRGB")
+	GlfwConfig.PlatformContext.EXT_framebuffer_sRGB = ExtensionSupportedWGL("WGL_EXT_framebuffer_sRGB")
+	GlfwConfig.PlatformContext.ARB_create_context = ExtensionSupportedWGL("WGL_ARB_create_context")
+	GlfwConfig.PlatformContext.ARB_create_context_profile = ExtensionSupportedWGL("WGL_ARB_create_context_profile")
+	GlfwConfig.PlatformContext.EXT_create_context_es2_profile = ExtensionSupportedWGL("WGL_EXT_create_context_es2_profile")
+	GlfwConfig.PlatformContext.ARB_create_context_robustness = ExtensionSupportedWGL("WGL_ARB_create_context_robustness")
+	GlfwConfig.PlatformContext.ARB_create_context_no_error = ExtensionSupportedWGL("WGL_ARB_create_context_no_error")
+	GlfwConfig.PlatformContext.EXT_swap_control = ExtensionSupportedWGL("WGL_EXT_swap_control")
+	GlfwConfig.PlatformContext.EXT_colorspace = ExtensionSupportedWGL("WGL_EXT_colorspace")
+	GlfwConfig.PlatformContext.ARB_pixel_format = ExtensionSupportedWGL("WGL_ARB_pixel_format")
+	GlfwConfig.PlatformContext.ARB_context_flush_control = ExtensionSupportedWGL("WGL_ARB_context_flush_control")
 
 	if err := gl.WglMakeCurrent(pdc, prc); err != nil {
 		return err
@@ -452,63 +512,43 @@ func (w *window) initWGL() error {
 	if err := gl.WglDeleteContext(rc); err != nil {
 		return err
 	}
+	//windows.ReleaseDC(dc)
 	GlfwConfig.PlatformContext.inited = true
 	return nil
 }
 
-func extensionSupportedWGL(extension string) bool {
-	var extensions string
-
-	if gl.WglGetExtensionsStringARB_Available() {
-		extensions = gl.WglGetExtensionsStringARB(gl.WglGetCurrentDC())
-	} else if gl.WglGetExtensionsStringEXT_Available() {
-		extensions = gl.WglGetExtensionsStringEXT()
-	}
-
-	if len(extensions) == 0 {
-		return false
-	}
-
-	for _, str := range strings.Split(extensions, " ") {
-		if extension == str {
-			return true
-		}
-	}
-	return false
-}
-
-func (w *window) createContextWGL(ctxconfig *CtxConfig, fbconfig *FbConfig) error {
-	share := syscall.Handle(0)
+func (c *glContext) createContextWGL(ctxconfig *CtxConfig, fbconfig *FbConfig) (winsyscall.Handle, error) {
+	share := EmptyHandle
 	// var share _HGLRC
 	// if ctxconfig.share != nil {
 	// 	share = ctxconfig.share.context.platform.handle
 	// }
 
-	pixelFormat, err := w.choosePixelFormat(ctxconfig, fbconfig)
+	pixelFormat, err := c.win.choosePixelFormat(ctxconfig, fbconfig)
 	if err != nil {
-		return err
+		return EmptyHandle, err
 	}
 
 	var pfd windows.PIXELFORMATDESCRIPTOR
-	if _, err := windows.DescribePixelFormat(w.hdc, int32(pixelFormat), uint32(unsafe.Sizeof(pfd)), &pfd); err != nil {
-		return err
+	if _, err := windows.DescribePixelFormat(c.win.hdc, int32(pixelFormat), uint32(unsafe.Sizeof(pfd)), &pfd); err != nil {
+		return EmptyHandle, err
 	}
 
-	if err := windows.SetPixelFormat(w.hdc, int32(pixelFormat), &pfd); err != nil {
-		return err
+	if err := windows.SetPixelFormat(c.win.hdc, int32(pixelFormat), &pfd); err != nil {
+		return EmptyHandle, err
 	}
 
 	if ctxconfig.Client == OpenGLAPI {
 		if ctxconfig.forward && !GlfwConfig.PlatformContext.ARB_create_context {
-			return fmt.Errorf("glfw: a forward compatible OpenGL context requested but WGL_ARB_create_context is unavailable: %w", VersionUnavailable)
+			return EmptyHandle, fmt.Errorf("glfw: a forward compatible OpenGL context requested but WGL_ARB_create_context is unavailable: %w", VersionUnavailable)
 		}
 
 		if ctxconfig.profile != 0 && !GlfwConfig.PlatformContext.ARB_create_context_profile {
-			return fmt.Errorf("glfw: OpenGL profile requested but WGL_ARB_create_context_profile is unavailable: %w", VersionUnavailable)
+			return EmptyHandle, fmt.Errorf("glfw: OpenGL profile requested but WGL_ARB_create_context_profile is unavailable: %w", VersionUnavailable)
 		}
 	} else {
 		if !GlfwConfig.PlatformContext.ARB_create_context || !GlfwConfig.PlatformContext.ARB_create_context_profile || !GlfwConfig.PlatformContext.EXT_create_context_es2_profile {
-			return fmt.Errorf("glfw: OpenGL ES requested but WGL_ARB_create_context_es2_profile is unavailable: %w", APIUnavailable)
+			return EmptyHandle, fmt.Errorf("glfw: OpenGL ES requested but WGL_ARB_create_context_es2_profile is unavailable: %w", APIUnavailable)
 		}
 	}
 
@@ -579,31 +619,240 @@ func (w *window) createContextWGL(ctxconfig *CtxConfig, fbconfig *FbConfig) erro
 
 		attribs = append(attribs, 0, 0)
 
-		var err error
-		w.context.platform.handle, err = gl.WglCreateContextAttribsARB(w.hdc, share, &attribs[0])
-		if err != nil {
-			return err
-		}
+		c.context.extensionSupported = extensionSupportedWGL
+		return gl.WglCreateContextAttribsARB(c.win.hdc, share, &attribs[0])
 	} else {
-		var err error
-		w.context.platform.handle, err = gl.WglCreateContext(w.hdc)
-		if err != nil {
-			return err
+		return gl.WglCreateContext(c.win.hdc)
+	}
+}
+
+func (c *glContext) refreshContextAttribs(ctxconfig *CtxConfig) (ferr error) {
+	const (
+		GL_COLOR_BUFFER_BIT                    = 0x00004000
+		GL_CONTEXT_COMPATIBILITY_PROFILE_BIT   = 0x00000002
+		GL_CONTEXT_CORE_PROFILE_BIT            = 0x00000001
+		GL_CONTEXT_FLAG_DEBUG_BIT              = 0x00000002
+		GL_CONTEXT_FLAG_FORWARD_COMPATIBLE_BIT = 0x00000001
+		GL_CONTEXT_FLAG_NO_ERROR_BIT_KHR       = 0x00000008
+		GL_CONTEXT_FLAGS                       = 0x821E
+		GL_CONTEXT_PROFILE_MASK                = 0x9126
+		GL_CONTEXT_RELEASE_BEHAVIOR            = 0x82FB
+		GL_CONTEXT_RELEASE_BEHAVIOR_FLUSH      = 0x82FC
+		GL_LOSE_CONTEXT_ON_RESET_ARB           = 0x8252
+		GL_NO_RESET_NOTIFICATION_ARB           = 0x8261
+		GL_NONE                                = 0
+		GL_RESET_NOTIFICATION_STRATEGY_ARB     = 0x8256
+		GL_VERSION                             = 0x1F02
+	)
+
+	c.context.source = ctxconfig.source
+	c.context.client = OpenGLAPI
+
+	// p, err := _glfc.contextSlot.get()
+	// if err != nil {
+	// 	return err
+	// }
+	// previous := (*Window)(unsafe.Pointer(p))
+	// defer func() {
+	// 	err := previous.MakeContextCurrent()
+	// 	if ferr == nil {
+	// 		ferr = err
+	// 	}
+	// }()
+	// if err := c.win.MakeContextCurrent(); err != nil {
+	// 	return err
+	// }
+	pdc := gl.WglGetCurrentDC()
+	prc := gl.WglGetCurrentContext()
+	if err := gl.WglMakeCurrent(c.win.hdc, c.hglrc); err != nil {
+		_ = gl.WglMakeCurrent(pdc, prc)
+		_ = gl.WglDeleteContext(c.win.hdc)
+		return err
+	}
+
+	getIntegerv := gl.GetProcAddressWGL("glGetIntegerv")
+	getString := gl.GetProcAddressWGL("glGetString")
+	if getIntegerv == 0 || getString == 0 {
+		return fmt.Errorf("glfw: entry point retrieval is broken: %w", PlatformError)
+	}
+
+	r, _, _ := syscall.Syscall(getString, 1, uintptr(GL_VERSION), 0, 0)
+	version := bytePtrToString((*byte)(unsafe.Pointer(r)))
+	if version == "" {
+		if ctxconfig.Client == OpenGLAPI {
+			return fmt.Errorf("glfw: OpenGL version string retrieval is broken: %w", PlatformError)
+		} else {
+			return fmt.Errorf("glfw: OpenGL ES version string retrieval is broken: %w", PlatformError)
+		}
+	}
+
+	for _, prefix := range []string{
+		"OpenGL ES-CM ",
+		"OpenGL ES-CL ",
+		"OpenGL ES "} {
+		if strings.HasPrefix(version, prefix) {
+			version = version[len(prefix):]
+			c.context.client = OpenGLESAPI
+			break
+		}
+	}
+
+	m := regexp.MustCompile(`^(\d+)(\.(\d+)(\.(\d+))?)?`).FindStringSubmatch(version)
+	if m == nil {
+		if c.context.client == OpenGLAPI {
+			return fmt.Errorf("glfw: no version found in OpenGL version string: %w", PlatformError)
+		} else {
+			return fmt.Errorf("glfw: no version found in OpenGL ES version string: %w", PlatformError)
+		}
+	}
+	c.context.major, _ = strconv.Atoi(m[1])
+	c.context.minor, _ = strconv.Atoi(m[3])
+	c.context.revision, _ = strconv.Atoi(m[5])
+
+	if c.context.major < ctxconfig.Major || (c.context.major == ctxconfig.Major && c.context.minor < ctxconfig.Minor) {
+		// The desired OpenGL version is greater than the actual version
+		// This only happens if the machine lacks {GLX|WGL}_ARB_create_context
+		// /and/ the user has requested an OpenGL version greater than 1.0
+
+		// For API consistency, we emulate the behavior of the
+		// {GLX|WGL}_ARB_create_context extension and fail here
+
+		if c.context.client == OpenGLAPI {
+			return fmt.Errorf("glfw: requested OpenGL version %d.%d, got version %d.%d: %w", ctxconfig.Major, ctxconfig.Minor, c.context.major, c.context.minor, VersionUnavailable)
+		} else {
+			return fmt.Errorf("glfw: requested OpenGL ES version %d.%d, got version %d.%d: %w", ctxconfig.Major, ctxconfig.Minor, c.context.major, c.context.minor, VersionUnavailable)
+		}
+	}
+
+	if c.context.major >= 3 {
+		// OpenGL 3.0+ uses a different function for extension string retrieval
+		// We cache it here instead of in glfwExtensionSupported mostly to alert
+		// users as early as possible that their build may be broken
+
+		glGetStringi := gl.GetProcAddressWGL("glGetStringi")
+		if glGetStringi == 0 {
+			return fmt.Errorf("glfw: entry point retrieval is broken: %w", PlatformError)
+		}
+	}
+
+	if c.context.client == OpenGLAPI {
+		// Read back context flags (OpenGL 3.0 and above)
+		if c.context.major >= 3 {
+			var flags int32
+			_, _, _ = syscall.Syscall(getIntegerv, GL_CONTEXT_FLAGS, uintptr(unsafe.Pointer(&flags)), 0, 0)
+
+			if flags&GL_CONTEXT_FLAG_FORWARD_COMPATIBLE_BIT != 0 {
+				c.context.forward = true
+			}
+
+			if flags&GL_CONTEXT_FLAG_DEBUG_BIT != 0 {
+				c.context.debug = true
+			} else {
+				ok, err := c.ExtensionSupported("GL_ARB_debug_output")
+				if err != nil {
+					return err
+				}
+				if ok && ctxconfig.debug {
+					// HACK: This is a workaround for older drivers (pre KHR_debug)
+					//       not setting the debug bit in the context flags for
+					//       debug contexts
+					c.context.debug = true
+				}
+			}
+
+			if flags&GL_CONTEXT_FLAG_NO_ERROR_BIT_KHR != 0 {
+				c.context.noerror = true
+			}
 		}
 
-		if share != 0 {
-			if err := gl.WglShareLists(share, w.context.platform.handle); err != nil {
-				return err
+		// Read back OpenGL context profile (OpenGL 3.2 and above)
+		if c.context.major >= 4 || (c.context.major == 3 && c.context.minor >= 2) {
+			var mask int32
+			_, _, _ = syscall.Syscall(getIntegerv, GL_CONTEXT_PROFILE_MASK, uintptr(unsafe.Pointer(&mask)), 0, 0)
+
+			if mask&GL_CONTEXT_COMPATIBILITY_PROFILE_BIT != 0 {
+				c.context.profile = OpenGLCompatProfile
+			} else if mask&GL_CONTEXT_CORE_PROFILE_BIT != 0 {
+				c.context.profile = OpenGLCoreProfile
+			} else {
+				ok, err := c.ExtensionSupported("GL_ARB_compatibility")
+				if err != nil {
+					return err
+				}
+				if ok {
+					// HACK: This is a workaround for the compatibility profile bit
+					//       not being set in the context flags if an OpenGL 3.2+
+					//       context was created without having requested a specific
+					//       version
+					c.context.profile = OpenGLCompatProfile
+				}
+			}
+		}
+
+		// Read back robustness strategy
+		ok, err := c.ExtensionSupported("GL_ARB_robustness")
+		if err != nil {
+			return err
+		}
+		if ok {
+			// NOTE: We avoid using the context flags for detection, as they are
+			//       only present from 3.0 while the extension applies from 1.1
+
+			var strategy int32
+			_, _, _ = syscall.Syscall(getIntegerv, GL_RESET_NOTIFICATION_STRATEGY_ARB, uintptr(unsafe.Pointer(&strategy)), 0, 0)
+
+			if strategy == GL_LOSE_CONTEXT_ON_RESET_ARB {
+				c.context.robustness = LoseContextOnReset
+			} else if strategy == GL_NO_RESET_NOTIFICATION_ARB {
+				c.context.robustness = NoResetNotification
+			}
+		}
+	} else {
+		// Read back robustness strategy
+		ok, err := c.ExtensionSupported("GL_EXT_robustness")
+		if err != nil {
+			return err
+		}
+		if ok {
+			// NOTE: The values of these constants match those of the OpenGL ARB
+			//       one, so we can reuse them here
+
+			var strategy int32
+			_, _, _ = syscall.Syscall(getIntegerv, GL_RESET_NOTIFICATION_STRATEGY_ARB, uintptr(unsafe.Pointer(&strategy)), 0, 0)
+
+			if strategy == GL_LOSE_CONTEXT_ON_RESET_ARB {
+				c.context.robustness = LoseContextOnReset
+			} else if strategy == GL_NO_RESET_NOTIFICATION_ARB {
+				c.context.robustness = NoResetNotification
 			}
 		}
 	}
 
-	w.Context.makeCurrent = makeContextCurrentWGL
-	w.Context.swapBuffers = swapBuffersWGL
-	w.Context.swapInterval = swapIntervalWGL
-	w.Context.extensionSupported = extensionSupportedWGL
-	w.Context.getProcAddress = getProcAddressWGL
-	w.Context.destroy = destroyContextWGL
+	ok, err := c.ExtensionSupported("GL_KHR_context_flush_control")
+	if err != nil {
+		return err
+	}
+	if ok {
+		var behavior int32
+		_, _, _ = syscall.Syscall(getIntegerv, GL_CONTEXT_RELEASE_BEHAVIOR, uintptr(unsafe.Pointer(&behavior)), 0, 0)
+
+		if behavior == GL_NONE {
+			c.context.release = ReleaseBehaviorNone
+		} else if behavior == GL_CONTEXT_RELEASE_BEHAVIOR_FLUSH {
+			c.context.release = ReleaseBehaviorFlush
+		}
+	}
+
+	// Clearing the front buffer to black to avoid garbage pixels left over from
+	// previous uses of our bit of VRAM
+	glClear := gl.GetProcAddressWGL("glClear")
+	_, _, _ = syscall.Syscall(glClear, GL_COLOR_BUFFER_BIT, 0, 0, 0)
+
+	// if w.doublebuffer {
+	// 	if err := c.SwapBuffers(); err != nil {
+	// 		return err
+	// 	}
+	// }
 
 	return nil
 }
@@ -791,18 +1040,75 @@ func (w *window) choosePixelFormat(ctxconfig *CtxConfig, fbconfig_ *FbConfig) (i
 	return int(closest.handle), nil
 }
 
-func (c *glContext) RenderTarget() (gpu.RenderTarget, error) {
-	return gpu.OpenGLRenderTarget{}, nil
-}
+func createHelperWindow() error {
+	if resources.helperHwnd != 0 {
+		return nil
+	}
+	h, err := windows.CreateWindowEx(
+		windows.WS_EX_OVERLAPPEDWINDOW,
+		resources.class,
+		"Mado message window",
+		windows.WS_CLIPSIBLINGS|windows.WS_CLIPCHILDREN,
+		0, 0, 1, 1, 0, 0,
+		resources.handle, 0)
+	if err != nil {
+		return err
+	}
 
-func (c *glContext) API() gpu.API {
-	return gpu.OpenGL{}
-}
+	resources.helperHwnd = h
 
-func (c *glContext) Present() error {
-	// Assume the caller already locked the context.
-	//C.glFlush(c.glFlush)
+	// HACK: The command to the first ShowWindow call is ignored if the parent
+	//       process passed along a STARTUPINFO, so clear that with a no-op call
+	windows.ShowWindow(resources.helperHwnd, windows.SW_HIDE)
+
+	// // Register for HID device notifications
+	// if !microsoftgdk.IsXbox() {
+	// 	_GUID_DEVINTERFACE_HID := windows.GUID{
+	// 		Data1: 0x4d1e55b2,
+	// 		Data2: 0xf16f,
+	// 		Data3: 0x11cf,
+	// 		Data4: [...]byte{0x88, 0xcb, 0x00, 0x11, 0x11, 0x00, 0x00, 0x30},
+	// 	}
+
+	// 	var dbi _DEV_BROADCAST_DEVICEINTERFACE_W
+	// 	dbi.dbcc_size = uint32(unsafe.Sizeof(dbi))
+	// 	dbi.dbcc_devicetype = _DBT_DEVTYP_DEVICEINTERFACE
+	// 	dbi.dbcc_classguid = _GUID_DEVINTERFACE_HID
+	// 	notify, err := _RegisterDeviceNotificationW(windows.Handle(_glfw.platformWindow.helperWindowHandle), unsafe.Pointer(&dbi), _DEVICE_NOTIFY_WINDOW_HANDLE)
+	// 	if err != nil {
+	// 		return err
+	// 	}
+	// 	_glfw.platformWindow.deviceNotificationHandle = notify
+	// }
+
+	var msg windows.Msg
+	for windows.PeekMessage(&msg, resources.helperHwnd, 0, 0, _PM_REMOVE) {
+		windows.TranslateMessage(&msg)
+		windows.DispatchMessage(&msg)
+	}
+
 	return nil
+}
+
+func ExtensionSupportedWGL(extension string) bool {
+	var extensions string
+
+	if gl.WglGetExtensionsStringARB_Available() {
+		extensions = gl.WglGetExtensionsStringARB(gl.WglGetCurrentDC())
+	} else if gl.WglGetExtensionsStringEXT_Available() {
+		extensions = gl.WglGetExtensionsStringEXT()
+	}
+
+	if len(extensions) == 0 {
+		return false
+	}
+
+	for _, str := range strings.Split(extensions, " ") {
+		if extension == str {
+			return true
+		}
+	}
+	return false
 }
 
 // func (w *window) NewContext() (mado.Context, error) {
@@ -1027,4 +1333,106 @@ func chooseFBConfig(desired *FbConfig, alternatives []*FbConfig) *FbConfig {
 	}
 
 	return closest
+}
+
+func (c *glContext) ExtensionSupported(extension string) (bool, error) {
+	const (
+		GL_EXTENSIONS     = 0x1F03
+		GL_NUM_EXTENSIONS = 0x821D
+	)
+
+	if !GlfwConfig.Initialized {
+		return false, NotInitialized
+	}
+
+	// ptr, err := _glfc.contextSlot.get()
+	// if err != nil {
+	// 	return false, err
+	// }
+	// window := (*Window)(unsafe.Pointer(ptr))
+	// if window == nil {
+	// 	return false, fmt.Errorf("glfw: cannot query extension without a current OpenGL or OpenGL ES context %w", NoCurrentContext)
+	// }
+
+	if c.context.major >= 3 {
+		// Check if extension is in the modern OpenGL extensions string list
+
+		glGetIntegerv := gl.GetProcAddressWGL("glGetIntegerv")
+		var count int32
+		_, _, _ = syscall.Syscall(glGetIntegerv, GL_NUM_EXTENSIONS, uintptr(unsafe.Pointer(&count)), 0, 0)
+
+		glGetStringi := gl.GetProcAddressWGL("glGetStringi")
+		for i := 0; i < int(count); i++ {
+			r, _, _ := syscall.Syscall(glGetStringi, GL_EXTENSIONS, uintptr(i), 0, 0)
+			if r == 0 {
+				return false, fmt.Errorf("glfw: extension string retrieval is broken: %w", PlatformError)
+			}
+
+			en := bytePtrToString((*byte)(unsafe.Pointer(r)))
+			if en == extension {
+				return true, nil
+			}
+		}
+	} else {
+		// Check if extension is in the old style OpenGL extensions string
+
+		glGetString := gl.GetProcAddressWGL("glGetString")
+		r, _, _ := syscall.Syscall(glGetString, GL_EXTENSIONS, 0, 0, 0)
+		if r == 0 {
+			return false, fmt.Errorf("glfw: extension string retrieval is broken: %w", PlatformError)
+		}
+
+		extensions := bytePtrToString((*byte)(unsafe.Pointer(r)))
+		for _, str := range strings.Split(extensions, " ") {
+			if str == extension {
+				return true, nil
+			}
+		}
+	}
+
+	// Check if extension is in the platform-specific string
+	return c.context.extensionSupported(extension), nil
+}
+
+// bytePtrToString takes a pointer to a sequence of text and returns the corresponding string.
+// If the pointer is nil, it returns the empty string. It assumes that the text sequence is
+// terminated at a zero byte; if the zero byte is not present, the program may crash.
+// It is copied from golang.org/x/sys/windows/winsyscall.go for use on macOS, Linux and Windows
+func bytePtrToString(p *byte) string {
+	if p == nil {
+		return ""
+	}
+	if *p == 0 {
+		return ""
+	}
+
+	// Find NUL terminator.
+	n := 0
+	for ptr := unsafe.Pointer(p); *(*byte)(ptr) != 0; n++ {
+		ptr = unsafe.Add(ptr, 1)
+	}
+
+	// unsafe.String(p, n) is available as of Go 1.20.
+	return string(unsafe.Slice(p, n))
+}
+
+func extensionSupportedWGL(extension string) bool {
+	var extensions string
+
+	if gl.WglGetExtensionsStringARB_Available() {
+		extensions = gl.WglGetExtensionsStringARB(gl.WglGetCurrentDC())
+	} else if gl.WglGetExtensionsStringEXT_Available() {
+		extensions = gl.WglGetExtensionsStringEXT()
+	}
+
+	if len(extensions) == 0 {
+		return false
+	}
+
+	for _, str := range strings.Split(extensions, " ") {
+		if extension == str {
+			return true
+		}
+	}
+	return false
 }

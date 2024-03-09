@@ -89,6 +89,15 @@ func WglShareListss(hglrc1 windows.Handle, hglrc2 windows.Handle) error {
 
 // extensions API
 
+func WglCreateContextAttribsARB(hDC windows.Handle, hshareContext windows.Handle, attribList *int32) (windows.Handle, error) {
+	r, _, e := syscall.Syscall(procWGLCreateContextAttribsARB, 3, uintptr(hDC), uintptr(hshareContext), uintptr(unsafe.Pointer(attribList)))
+	if windows.Handle(r) == 0 {
+		// TODO: Show more detailed error? See the original implementation.
+		return 0, fmt.Errorf("glfw: wglCreateContextAttribsARB failed: %w", e)
+	}
+	return windows.Handle(r), nil
+}
+
 func WglGetExtensionsStringARB(hdc windows.Handle) string {
 	r, _, _ := syscall.Syscall(procWGLGetExtensionsStringARB, 1, uintptr(hdc), 0, 0)
 	return windows.BytePtrToString((*byte)(unsafe.Pointer(r)))
@@ -121,4 +130,12 @@ func WglSwapIntervalEXT(interval int32) error {
 		return fmt.Errorf("glfw: wglSwapIntervalEXT failed: %w", e)
 	}
 	return nil
+}
+
+func GetProcAddressWGL(procname string) uintptr {
+	proc := WglGetProcAddress(procname)
+	if proc != 0 {
+		return proc
+	}
+	return OpenGL32.NewProc(procname).Addr()
 }

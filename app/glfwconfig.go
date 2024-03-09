@@ -97,7 +97,7 @@ type context struct {
 }
 
 type Library struct {
-	initialized bool
+	Initialized bool
 	Enable      bool
 
 	Hints struct {

@@ -357,10 +357,11 @@ func (c *glContext) Refresh() error {
 	return nil
 }
 
-func (c *glContext) SwapBuffers() {
+func (c *glContext) SwapBuffers() error {
 	//c.Lock()
 	//defer c.Unlock()
 	C.gio_swapBuffers(c.ctx)
+	return nil
 }
 
 func (c *glContext) SwapInterval(interval int) {

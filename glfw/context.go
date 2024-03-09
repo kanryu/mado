@@ -39,7 +39,9 @@ func GetCurrentContext() *Window {
 // swap interval is greater than zero, the GPU driver waits the specified number
 // of screen updates before swapping the buffers.
 func (w *Window) SwapBuffers() {
-	w.ctx.SwapBuffers()
+	if err := w.ctx.SwapBuffers(); err != nil {
+		panic(err)
+	}
 	t := time.NewTicker(1000 / 60 * time.Millisecond)
 	<-t.C
 	panicError()

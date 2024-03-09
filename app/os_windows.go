@@ -77,6 +77,9 @@ var winMap sync.Map
 // iconID is the ID of the icon in the resource file.
 const iconID = 1
 
+// Window Class Name required when creating windows
+const madoWindowClass = "MadoWindow1.0"
+
 var resources struct {
 	once sync.Once
 	// handle is the module handle from GetModuleHandle.
@@ -85,6 +88,8 @@ var resources struct {
 	class uint16
 	// cursor is the arrow cursor resource.
 	cursor syscall.Handle
+	// hwnd of helper window
+	helperHwnd syscall.Handle
 }
 
 var withPollEvents bool
@@ -176,7 +181,7 @@ func initResources() error {
 		LpfnWndProc:   syscall.NewCallback(windowProc),
 		HInstance:     hInst,
 		HIcon:         icon,
-		LpszClassName: syscall.StringToUTF16Ptr("GioWindow"),
+		LpszClassName: syscall.StringToUTF16Ptr(madoWindowClass),
 	}
 	cls, err := windows.RegisterClassEx(&wcls)
 	if err != nil {

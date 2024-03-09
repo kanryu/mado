@@ -175,7 +175,7 @@ type Context interface {
 	Release()
 	Lock() error
 	Unlock()
-	SwapBuffers()
+	SwapBuffers() error
 	SwapInterval(interval int)
 }
 

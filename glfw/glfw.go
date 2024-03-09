@@ -135,6 +135,7 @@ func Init() error {
 
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt)
 	theApp = NewApplication(ctx, stop)
+	app.GlfwConfig.Initialized = true
 	return acceptError(APIUnavailable)
 }
 

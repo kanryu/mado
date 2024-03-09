@@ -145,8 +145,9 @@ func (c *d3d11Context) MakeCurrentContext() error {
 	return nil
 }
 
-func (c *d3d11Context) SwapBuffers() {
+func (c *d3d11Context) SwapBuffers() error {
 	fmt.Println("not implamented")
+	return nil
 }
 
 func (c *d3d11Context) SwapInterval(interval int) {

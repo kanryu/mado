@@ -83,7 +83,7 @@ func main() {
 		fmt.Println("Rotatef", gl.GetError())
 
 		gl.Begin(gl.TRIANGLES)
-		fmt.Println("Begin", gl.GetError())
+		//fmt.Println("Begin", gl.GetError())
 		gl.Color3f(1.0, 0.0, 0.0)
 		gl.Vertex3f(-5.0, 0.0, -4.0)
 		gl.Color3f(0.0, 1.0, 0.0)
