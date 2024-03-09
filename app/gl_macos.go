@@ -87,6 +87,10 @@ type glContext struct {
 	glFlush C.PFN_glFlush
 }
 
+func init() {
+	glfwconfiginit()
+}
+
 func newContext(w *window) (*glContext, error) {
 	clib := C.CString("/System/Library/Frameworks/OpenGL.framework/OpenGL")
 	defer C.free(unsafe.Pointer(clib))

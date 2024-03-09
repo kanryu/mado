@@ -14,7 +14,6 @@ import (
 func (w *Window) MakeContextCurrent() {
 	PollEvents()
 	runtime.Gosched()
-	<-w.data.WakeupFuncs
 	if ctx, err := w.callbacks.D.NewContext(); err != nil {
 		panic(err)
 	} else {
