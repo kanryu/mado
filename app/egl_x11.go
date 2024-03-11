@@ -19,6 +19,9 @@ type x11Context struct {
 	*egl.Context
 }
 
+type PlatformContextState struct{}
+type PlatformLibraryContextState struct{}
+
 func init() {
 	newX11EGLContext = func(w *x11Window) (mado.Context, error) {
 		disp := egl.NativeDisplayType(unsafe.Pointer(w.display()))
@@ -35,6 +38,17 @@ func (c *x11Context) Release() {
 		c.Context.Release()
 		c.Context = nil
 	}
+}
+
+func (c *x11Context) SwapBuffers() error {
+	if c.Context != nil {
+		return c.Context.SwapBuffers()
+	}
+	return nil
+}
+
+func (c *x11Context) SwapInterval(interval int) {
+	// It seems swapInterval is not supported on EGL.
 }
 
 func (c *x11Context) Refresh() error {

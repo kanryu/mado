@@ -156,6 +156,14 @@ func (c *Context) EnableVSync(enable bool) {
 	}
 }
 
+func (c *Context) SwapBuffers() error {
+	ok := eglSwapBuffers(c.disp, c.eglSurf)
+	if ok {
+		return nil
+	}
+	return fmt.Errorf("eglSwapBuffers returned false")
+}
+
 func hasExtension(exts []string, ext string) bool {
 	for _, e := range exts {
 		if ext == e {

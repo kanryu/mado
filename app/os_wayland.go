@@ -1875,3 +1875,8 @@ func fromFixed(v C.wl_fixed_t) float32 {
 	f := math.Float64frombits(b) - (3 << 43)
 	return float32(f)
 }
+
+func (w *window) GetFrameBufferSize() image.Point {
+	// TODO
+	return image.Pt(int(640), int(480))
+}

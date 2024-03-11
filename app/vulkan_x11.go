@@ -66,6 +66,15 @@ func (c *x11VkContext) Release() {
 	*c = x11VkContext{}
 }
 
+func (c *x11VkContext) SwapBuffers() error {
+	// TODO is this correct?
+	return c.Present()
+}
+
+func (c *x11VkContext) SwapInterval(interval int) {
+	// TODO
+}
+
 func (c *x11VkContext) Present() error {
 	return c.ctx.present()
 }

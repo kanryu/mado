@@ -909,3 +909,10 @@ func (w *x11Window) updateXkbKeymap() error {
 	w.xkb.SetKeymap(unsafe.Pointer(keymap), unsafe.Pointer(state))
 	return nil
 }
+
+func (w *x11Window) GetFrameBufferSize() image.Point {
+	var size C.XSizeHints
+	var sr C.long
+	C.XGetWMNormalHints(w.x, w.xw, &size, &sr)
+	return image.Pt(int(size.width), int(size.height))
+}
