@@ -54,6 +54,17 @@ func (c *wlContext) Release() {
 	}
 }
 
+func (c *wlContext) SwapBuffers() error {
+	if c.Context != nil {
+		return c.Context.SwapBuffers()
+	}
+	return nil
+}
+
+func (c *wlContext) SwapInterval(interval int) {
+	// It seems swapInterval is not supported on EGL.
+}
+
 func (c *wlContext) Refresh() error {
 	c.Context.ReleaseSurface()
 	if c.eglWin != nil {

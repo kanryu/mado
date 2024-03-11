@@ -51,6 +51,14 @@ func init() {
 	}
 }
 
+func (c *wlVkContext) SwapBuffers() error {
+	return c.Present()
+}
+
+func (c *wlVkContext) SwapInterval(interval int) {
+	// It seems swapInterval is not supported.
+}
+
 func (c *wlVkContext) RenderTarget() (gpu.RenderTarget, error) {
 	return c.ctx.RenderTarget()
 }
