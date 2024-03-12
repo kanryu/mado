@@ -78,7 +78,8 @@ You selected [火災] and pressed Enter. Then you will see a screen like this.
 Note:
   At this time, the token [火災] is posted to the Window as a Char event.
 
-> [Fire alarm is spelled 火災ほうちき]
+>                          [ほうちき]
+> [Fire alarm is spelled 火災]
 >                          [報知器]
 >                          [放置]
 >                          [houchiki]
