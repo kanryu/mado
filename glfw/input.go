@@ -1,5 +1,7 @@
 package glfw
 
+import "image"
+
 // Joystick corresponds to a joystick.
 type Joystick int
 
@@ -294,3 +296,84 @@ const (
 	CursorDisabled int = 0x00034003
 	CursorCaptured int = 0x00034004
 )
+
+// TODO: implement these input functions
+
+// GetInputMode returns the value of an input option of the window.
+func (w *Window) GetInputMode(mode InputMode) int {
+	return 0
+}
+
+// SetInputMode sets an input option for the window.
+func (w *Window) SetInputMode(mode InputMode, value int) {}
+
+// RawMouseMotionSupported returns whether raw mouse motion is supported on the
+// current system. This status does not change after GLFW has been initialized
+// so you only need to check this once. If you attempt to enable raw motion on
+// a system that does not support it, PlatformError will be emitted.
+//
+// Raw mouse motion is closer to the actual motion of the mouse across a
+// surface. It is not affected by the scaling and acceleration applied to the
+// motion of the desktop cursor. That processing is suitable for a cursor while
+// raw motion is better for controlling for example a 3D camera. Because of
+// this, raw mouse motion is only provided when the cursor is disabled.
+//
+// This function must only be called from the main thread.
+func RawMouseMotionSupported() bool {
+	return true
+}
+
+// Cursor represents a cursor.
+type Cursor struct{}
+
+// GetCursorPos returns the last reported position of the cursor.
+//
+// If the cursor is disabled (with CursorDisabled) then the cursor position is
+// unbounded and limited only by the minimum and maximum values of a double.
+//
+// The coordinate can be converted to their integer equivalents with the floor
+// function. Casting directly to an integer type works for positive coordinates,
+// but fails for negative ones.
+func (w *Window) GetCursorPos() (x, y float64) {
+	return
+}
+
+// SetCursorPos sets the position of the cursor. The specified window must
+// be focused. If the window does not have focus when this function is called,
+// it fails silently.
+//
+// If the cursor is disabled (with CursorDisabled) then the cursor position is
+// unbounded and limited only by the minimum and maximum values of a double.
+func (w *Window) SetCursorPos(xpos, ypos float64) {}
+
+// CreateCursor creates a new custom cursor image that can be set for a window with SetCursor.
+// The cursor can be destroyed with Destroy. Any remaining cursors are destroyed by Terminate.
+//
+// The image is ideally provided in the form of *image.NRGBA.
+// The pixels are 32-bit, little-endian, non-premultiplied RGBA, i.e. eight
+// bits per channel with the red channel first. They are arranged canonically
+// as packed sequential rows, starting from the top-left corner. If the image
+// type is not *image.NRGBA, it will be converted to it.
+//
+// The cursor hotspot is specified in pixels, relative to the upper-left corner of the cursor image.
+// Like all other coordinate systems in GLFW, the X-axis points to the right and the Y-axis points down.
+func CreateCursor(img image.Image, xhot, yhot int) *Cursor {
+	return &Cursor{}
+}
+
+// CreateStandardCursor returns a cursor with a standard shape,
+// that can be set for a window with SetCursor.
+func CreateStandardCursor(shape StandardCursor) *Cursor {
+	return &Cursor{}
+}
+
+// Destroy destroys a cursor previously created with CreateCursor.
+// Any remaining cursors will be destroyed by Terminate.
+func (c *Cursor) Destroy() {}
+
+// SetCursor sets the cursor image to be used when the cursor is over the client area
+// of the specified window. The set cursor will only be visible when the cursor mode of the
+// window is CursorNormal.
+//
+// On some platforms, the set cursor may not be visible unless the window also has input focus.
+func (w *Window) SetCursor(c *Cursor) {}
