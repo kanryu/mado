@@ -672,11 +672,11 @@ func (c *glContext) refreshContextAttribs(ctxconfig *CtxConfig) (ferr error) {
 			return fmt.Errorf("glfw: no version found in OpenGL ES version string: %w", PlatformError)
 		}
 	}
-	c.context.Fajor, _ = strconv.Atoi(m[1])
+	c.context.Major, _ = strconv.Atoi(m[1])
 	c.context.Minor, _ = strconv.Atoi(m[3])
 	c.context.Revision, _ = strconv.Atoi(m[5])
 
-	if c.context.Fajor < ctxconfig.Major || (c.context.Fajor == ctxconfig.Major && c.context.Minor < ctxconfig.Minor) {
+	if c.context.Major < ctxconfig.Major || (c.context.Major == ctxconfig.Major && c.context.Minor < ctxconfig.Minor) {
 		// The desired OpenGL version is greater than the actual version
 		// This only happens if the machine lacks {GLX|WGL}_ARB_create_context
 		// /and/ the user has requested an OpenGL version greater than 1.0
@@ -685,13 +685,13 @@ func (c *glContext) refreshContextAttribs(ctxconfig *CtxConfig) (ferr error) {
 		// {GLX|WGL}_ARB_create_context extension and fail here
 
 		if c.context.Client == OpenGLAPI {
-			return fmt.Errorf("glfw: requested OpenGL version %d.%d, got version %d.%d: %w", ctxconfig.Major, ctxconfig.Minor, c.context.Fajor, c.context.Minor, VersionUnavailable)
+			return fmt.Errorf("glfw: requested OpenGL version %d.%d, got version %d.%d: %w", ctxconfig.Major, ctxconfig.Minor, c.context.Major, c.context.Minor, VersionUnavailable)
 		} else {
-			return fmt.Errorf("glfw: requested OpenGL ES version %d.%d, got version %d.%d: %w", ctxconfig.Major, ctxconfig.Minor, c.context.Fajor, c.context.Minor, VersionUnavailable)
+			return fmt.Errorf("glfw: requested OpenGL ES version %d.%d, got version %d.%d: %w", ctxconfig.Major, ctxconfig.Minor, c.context.Major, c.context.Minor, VersionUnavailable)
 		}
 	}
 
-	if c.context.Fajor >= 3 {
+	if c.context.Major >= 3 {
 		// OpenGL 3.0+ uses a different function for extension string retrieval
 		// We cache it here instead of in glfwExtensionSupported mostly to alert
 		// users as early as possible that their build may be broken
@@ -704,7 +704,7 @@ func (c *glContext) refreshContextAttribs(ctxconfig *CtxConfig) (ferr error) {
 
 	if c.context.Client == OpenGLAPI {
 		// Read back context flags (OpenGL 3.0 and above)
-		if c.context.Fajor >= 3 {
+		if c.context.Major >= 3 {
 			var flags int32
 			_, _, _ = syscall.Syscall(getIntegerv, GL_CONTEXT_FLAGS, uintptr(unsafe.Pointer(&flags)), 0, 0)
 
@@ -733,7 +733,7 @@ func (c *glContext) refreshContextAttribs(ctxconfig *CtxConfig) (ferr error) {
 		}
 
 		// Read back OpenGL context profile (OpenGL 3.2 and above)
-		if c.context.Fajor >= 4 || (c.context.Fajor == 3 && c.context.Minor >= 2) {
+		if c.context.Major >= 4 || (c.context.Major == 3 && c.context.Minor >= 2) {
 			var mask int32
 			_, _, _ = syscall.Syscall(getIntegerv, GL_CONTEXT_PROFILE_MASK, uintptr(unsafe.Pointer(&mask)), 0, 0)
 
@@ -1321,7 +1321,7 @@ func (c *glContext) ExtensionSupported(extension string) (bool, error) {
 	// 	return false, fmt.Errorf("glfw: cannot query extension without a current OpenGL or OpenGL ES context %w", NoCurrentContext)
 	// }
 
-	if c.context.Fajor >= 3 {
+	if c.context.Major >= 3 {
 		// Check if extension is in the modern OpenGL extensions string list
 
 		glGetIntegerv := gl.GetProcAddressWGL("glGetIntegerv")
