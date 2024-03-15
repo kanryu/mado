@@ -6,32 +6,47 @@ At the initial stage, the functionality provided by the Mado package is almost t
 
 Although I think that the API of the Mado package should eventually mature and be used by many external products, for the time being we will prioritize support for the glfw layer as a stub.
 
-## GLFW compatibility layer in mado
 
-glfw in Mado actually refers to (go-gl/glfw)[https://github.com/go-gl/glfw], not (glfw/glfw)[https://github.com/glfw/glfw].
-This is because Mado is a library for Go language users and is not intended to be ported to other languages.
+## Package structure of mado framework
 
-go-gl/glfw is essentially a Go wrapper for glfw and should expose the C API, but it doesn't.
+- mado
+ - Provides interfaces and constants for basic concepts such as applications, windows, ime context, and renderers defined by the mado framework.
 
-In particular, Window is objectified as glfw.Window, and the glfw API and many callbacks related to Window are provided through this object.
+- mado/io or base
+  - Basic OS-independent objects such as events and coordinate calculations
+  - Should I change the name to something else?
 
-mado/glfw has attempted to be a complete port of glfw.Window from the beginning, and currently has a fairly high level of compatibility.
+- mado/driver
+  - Implementations and specific structs for various OS and Window Systems are defined.
+  - Implementation structs such as Window and App, on each OS
+  - MS-Windows, Mac OS, Linux X11, Linux Wayland, Android, iOS, Web(WebAssembly on browsers)
 
-On the other hand, most of the glfw APIs that are not related to Windows are still unimplemented, and the glfw applications that many users have written so far will not work.
-But don't worry. The tasks will be cleared one by one.
+- mado/renderer
+  - Various hardware renderers are implemented here.
+  - OpenGL, OpenGL ES, Vulkan, Metal, Direct3D11
+  - You can register a new externally defined renderer with mado by calling the registration function (e.g. AddRenderer())
+    - Additional renderers: e.g. skia, cairo, GDI+, MESA, CPU
 
-## OpenGL environment provided by GLFW
+## Deprecated packages
 
-When you write an application that makes any use of OpenGL without GLFW or glut support, you are faced with a frightening gap.
+- mado/app
+  - It is a core package in gioui, but this is because gio is a monolithic library, and it is not necessary for mado. The programs in this will eventually be split into multiple separate packages and disappear.
+- mado/f32
+  - will be moved to mado/io
+- mado/gesture
+  - will be moved to mado/io
+- mado/font
+  - will be moved to mado/io
+- mado/widget
+- mado/layout
+- mado/gpu
+- mado/op
+- mado/text
 
-Historically, GLFW's OpenGL initialization routines are among the best maintained and most used programs in the world.
-
-Initially, when I forked gioui wasn't accounted for that OpenGL insanity, so the OpenGL triangles weren't drawn at all.
-
-I searched for other promising implementations in this field and discovered [Ebitengine](https://github.com/hajimehoshi/ebiten). I was impressed with how well it was organized, but when it came to the important thing about his OpenGL initialization, he incorporated GLFW. However, it had been heavily ported to Go, so he decided to port this implementation to Mado.
-
-I installed Windows and Mac by the first release of Mado.
-I've verified that the triangle drawing sample works, but Linux support is still in its infancy, and there's still a lot of work to be done to provide the kind of support that GLFW provides for OpenGL. This is a topic that you who actually draw using Mado know more about than me who created Mado.
-
-Please post issues or pull requests on the Mado project. We welcome your cooperation.
+## What should be discussed 
+- mado/font
+  - MS-Windows, Mac, and iOS have their own text rendering
+  - I think go-text and freetype are usually used, but I think there are other options as well.
+- mado/camera, security, privilige
+  - How do you handle OS and hardware-specific events and requests, such as push notifications, cameras, security checks, permission requests and revocations, etc.?
 
