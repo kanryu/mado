@@ -284,8 +284,8 @@ func SetClipboardString(str string) {
 // of a few micro- or nanoseconds. It uses the highest-resolution monotonic time
 // source on each supported platform.
 func GetTime() float64 {
-	tm := app.GetTimeValue()
-	freq := app.GetTimeFrequency()
+	tm := app.GetTimerValue()
+	freq := app.GetTimerFrequency()
 	ret := float64(tm) / float64(freq)
 	panicError()
 	return ret

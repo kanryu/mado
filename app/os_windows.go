@@ -115,14 +115,14 @@ func PollEvents() {
 	// }
 }
 
-func GetTimeValue() uint64 {
+func GetTimerValue() uint64 {
 	value := windows.QueryPerformanceCounter()
 	return value
 }
 
 var qpFrequency uint64
 
-func GetTimeFrequency() uint64 {
+func GetTimerFrequency() uint64 {
 	if qpFrequency == 0 {
 		qpFrequency = windows.QueryPerformanceFrequency()
 	}

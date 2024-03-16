@@ -42,7 +42,7 @@ import (
 
 __attribute__ ((visibility ("hidden"))) void gio_getFramebufferSize(CFTypeRef viewRef, int* width, int* height);
 __attribute__ ((visibility ("hidden"))) bool gio_isEnablePollEvents(void);
-__attribute__ ((visibility ("hidden"))) uint64_t gio_getTimeFrequency(void);
+__attribute__ ((visibility ("hidden"))) uint64_t gio_getTimerFrequency(void);
 __attribute__ ((visibility ("hidden"))) uint64_t mach_absolute_time(void);
 __attribute__ ((visibility ("hidden"))) void gio_main(void);
 __attribute__ ((visibility ("hidden"))) void gio_enablePollEvents(void);
@@ -1018,13 +1018,13 @@ func IsEnablePollEvents() bool {
 	return bool(C.gio_isEnablePollEvents())
 }
 
-func GetTimeValue() uint64 {
+func GetTimerValue() uint64 {
 	tm := C.mach_absolute_time()
 	return uint64(tm)
 }
 
-func GetTimeFrequency() uint64 {
-	frequency := C.gio_getTimeFrequency()
+func GetTimerFrequency() uint64 {
+	frequency := C.gio_getTimerFrequency()
 	return uint64(frequency)
 }
 

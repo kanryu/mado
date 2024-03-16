@@ -537,7 +537,7 @@ void gio_initTimerNS(void)
     frequency = (info.denom * 1e9) / info.numer;
 }
 
-uint64 gio_getTimeFrequency(void)
+uint64 gio_getTimerFrequency(void)
 {
     return frequency;
 }
