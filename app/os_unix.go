@@ -11,6 +11,7 @@ import (
 
 	"github.com/kanryu/mado"
 	"github.com/kanryu/mado/io/pointer"
+	"golang.org/x/sys/unix"
 )
 
 // ViewEvent provides handles to the underlying window objects for the
@@ -117,4 +118,21 @@ var xCursor = [...]string{
 	pointer.CursorSouthResize:              "bottom_side",
 	pointer.CursorNorthEastSouthWestResize: "fd_double_arrow",
 	pointer.CursorNorthWestSouthEastResize: "bd_double_arrow",
+}
+
+func GetTimerValue() uint64 {
+	return getTime(unix.CLOCK_MONOTONIC)
+}
+
+var qpFrequency uint64
+
+func GetTimerFrequency() uint64 {
+	if qpFrequency == 0 {
+		if getTime(unix.CLOCK_MONOTONIC) == 0 {
+			qpFrequency = 1000000000
+		} else {
+			qpFrequency = 1000000
+		}
+	}
+	return qpFrequency
 }
