@@ -1075,15 +1075,12 @@ func (w *window) Configure(options []mado.Option) {
 			w.setTitle(prev, cnf)
 		}
 	case mado.Windowed:
+		w.config.Mode = mado.Windowed
 		switch prev.Mode {
 		case mado.Fullscreen:
-			w.config.Mode = mado.Windowed
 			w.size = w.wsize.Div(w.scale)
 			C.xdg_toplevel_unset_fullscreen(w.topLvl)
-		case mado.Minimized:
-			w.config.Mode = mado.Windowed
 		case mado.Maximized:
-			w.config.Mode = mado.Windowed
 			w.size = w.wsize.Div(w.scale)
 			C.xdg_toplevel_unset_maximized(w.topLvl)
 		}
