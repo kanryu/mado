@@ -334,6 +334,8 @@ var _ mado.Context = (*glContext)(nil)
 type glContext struct {
 	win          *window
 	hglrc        winsyscall.Handle
+	prevHdc      winsyscall.Handle
+	prevHglrc    winsyscall.Handle
 	context      GlfwContext
 	doublebuffer bool
 }
@@ -345,7 +347,7 @@ func init() {
 		name:     "opengl",
 		initializer: func(w *window) (mado.Context, error) {
 			ctx := &glContext{win: w}
-			err := ctx.MakeCurrentContext()
+			err := ctx.createContext()
 			return ctx, err
 		},
 	})
@@ -359,13 +361,14 @@ func (c *glContext) Refresh() error {
 }
 
 func (c *glContext) Lock() error {
-	return nil
+	return gl.WglMakeCurrent(c.win.hdc, c.hglrc)
 }
 
 func (c *glContext) Unlock() {
+	gl.WglMakeCurrent(winsyscall.Handle(0), winsyscall.Handle(0))
 }
 
-func (c *glContext) MakeCurrentContext() error {
+func (c *glContext) createContext() error {
 	// OpenGL contexts are implicit and thread-local. Lock the OS thread.
 	runtime.LockOSThread()
 
@@ -615,25 +618,7 @@ func (c *glContext) refreshContextAttribs(ctxconfig *CtxConfig) (ferr error) {
 	c.context.Source = ctxconfig.Source
 	c.context.Client = OpenGLAPI
 
-	// p, err := _glfc.contextSlot.get()
-	// if err != nil {
-	// 	return err
-	// }
-	// previous := (*Window)(unsafe.Pointer(p))
-	// defer func() {
-	// 	err := previous.MakeContextCurrent()
-	// 	if ferr == nil {
-	// 		ferr = err
-	// 	}
-	// }()
-	// if err := c.win.MakeContextCurrent(); err != nil {
-	// 	return err
-	// }
-	pdc := gl.WglGetCurrentDC()
-	prc := gl.WglGetCurrentContext()
-	if err := gl.WglMakeCurrent(c.win.hdc, c.hglrc); err != nil {
-		_ = gl.WglMakeCurrent(pdc, prc)
-		_ = gl.WglDeleteContext(c.win.hdc)
+	if err := c.Lock(); err != nil {
 		return err
 	}
 
@@ -815,12 +800,7 @@ func (c *glContext) refreshContextAttribs(ctxconfig *CtxConfig) (ferr error) {
 	glClear := gl.GetProcAddressWGL("glClear")
 	_, _, _ = syscall.Syscall(glClear, GL_COLOR_BUFFER_BIT, 0, 0, 0)
 
-	// if w.doublebuffer {
-	// 	if err := c.SwapBuffers(); err != nil {
-	// 		return err
-	// 	}
-	// }
-
+	c.Unlock()
 	return nil
 }
 

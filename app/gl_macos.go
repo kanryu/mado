@@ -116,8 +116,7 @@ func newContext(w *window) (*glContext, error) {
 		glFlush: glFlush,
 	}
 	c.Lock()
-	// defer c.Unlock()
-	//c.MakeCurrentContext()
+	defer c.Unlock()
 	err = c.RefreshContextAttribs(&GlfwConfig.Hints.Context)
 	if err != nil {
 		return nil, err
@@ -280,13 +279,17 @@ func (c *glContext) Lock() error {
 	return nil
 }
 
-func (c *glContext) MakeCurrentContext() error {
-	// OpenGL contexts are implicit and thread-local. Lock the OS thread.
-	runtime.LockOSThread()
+// func (c *glContext) MakeCurrentContext() error {
+// 	// OpenGL contexts are implicit and thread-local. Lock the OS thread.
+// 	runtime.LockOSThread()
 
-	C.gio_makeCurrentContext(c.ctx)
-	return nil
-}
+// 	C.gio_makeCurrentContext(c.ctx)
+// 	return nil
+// }
+
+// func (c *glContext) ReleaseContextCurrent() error {
+// 	C.gio_clearCurrentContext()
+// }
 
 func (c *glContext) Unlock() {
 	C.gio_clearCurrentContext()

@@ -4,10 +4,8 @@ import (
 	"fmt"
 	"image"
 	"io"
-	"runtime"
 	"strings"
 	"sync"
-	"time"
 	"unsafe"
 
 	"github.com/kanryu/mado"
@@ -462,18 +460,9 @@ func CreateWindow(width, height int, title string, monitor *Monitor, share *Wind
 	}
 	c.SetGlfwWindow(wnd)
 	theApp.appendWindow(wnd)
-	for {
-		runtime.Gosched()
-		t := time.NewTicker(time.Millisecond)
-		select {
-		case <-t.C:
-			PollEvents()
-			continue
-		case <-wnd.callbacks.WindowInitialized:
-			wnd.callbacks.WindowInitialized = nil
-			return wnd, nil
-		}
-	}
+	c.waitForInitialized()
+	wnd.initContext()
+	return wnd, nil
 }
 
 // Destroy destroys the specified window and its context. On calling this

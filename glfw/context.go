@@ -5,11 +5,7 @@ import (
 	"unsafe"
 )
 
-// MakeContextCurrent makes the context of the window current.
-// Originally GLFW 3 passes a null pointer to detach the context.
-// But since we're using receievers, DetachCurrentContext should
-// be used instead.
-func (w *Window) MakeContextCurrent() {
+func (w *Window) initContext() {
 	if ctx, err := w.callbacks.D.NewContext(); err != nil {
 		panic(err)
 	} else {
@@ -19,9 +15,16 @@ func (w *Window) MakeContextCurrent() {
 	panicError()
 }
 
+func (w *Window) MakeContextCurrent() {
+	if err := w.ctx.Lock(); err != nil {
+		panic(err)
+	}
+	panicError()
+}
+
 // DetachCurrentContext detaches the current context.
 func DetachCurrentContext() {
-	fmt.Println("not implemented")
+	theApp.Ctx.Unlock()
 	panicError()
 }
 

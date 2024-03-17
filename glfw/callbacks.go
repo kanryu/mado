@@ -2,6 +2,7 @@ package glfw
 
 import (
 	"image"
+	"runtime"
 	"time"
 	"unicode/utf8"
 
@@ -275,4 +276,21 @@ func (c *Callbacks) ClickFocus() {
 
 func (c *Callbacks) ActionAt(p f32.Point) (system.Action, bool) {
 	return c.W.Queue.ActionAt(p)
+}
+
+// waitForInitialized waits until mado.Driver is initialized.
+// It needs to poll some OS Events.
+func (c *Callbacks) waitForInitialized() {
+	for {
+		runtime.Gosched()
+		t := time.NewTicker(time.Millisecond)
+		select {
+		case <-t.C:
+			PollEvents()
+			continue
+		case <-c.WindowInitialized:
+			c.WindowInitialized = nil
+			return
+		}
+	}
 }
