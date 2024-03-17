@@ -5,6 +5,8 @@
 
 package app
 
+import "runtime"
+
 const (
 	_GLFW_INSERT_FIRST = 0
 	_GLFW_INSERT_LAST  = 1
@@ -181,7 +183,12 @@ func intToBool(x int) bool {
 func glfwconfiginit() {
 	// The default is OpenGL with minimum version 1.0
 	GlfwConfig.Hints.Context.Client = GLFW_OPENGL_API
-	GlfwConfig.Hints.Context.Source = NativeContextAPI
+	switch {
+	case runtime.GOOS == "darwin", runtime.GOOS == "windows":
+		GlfwConfig.Hints.Context.Source = NativeContextAPI
+	default:
+		GlfwConfig.Hints.Context.Source = EGLContextAPI
+	}
 	GlfwConfig.Hints.Context.Major = 2
 	GlfwConfig.Hints.Context.Minor = 0
 
@@ -208,4 +215,5 @@ func glfwconfiginit() {
 
 	// The default is to use full Retina resolution framebuffers
 	GlfwConfig.Hints.Window.Ns.Retina = GLFW_TRUE
+
 }

@@ -26,6 +26,8 @@ import (
 */
 import "C"
 
+var _ mado.Context = (*wlContext)(nil)
+
 type wlContext struct {
 	win *window
 	*egl.Context
@@ -35,7 +37,11 @@ type wlContext struct {
 func init() {
 	newWaylandEGLContext = func(w *window) (mado.Context, error) {
 		disp := egl.NativeDisplayType(unsafe.Pointer(w.display()))
-		ctx, err := egl.NewContext(disp)
+		eglApi := egl.EGL_OPENGL_ES_API
+		if GlfwConfig.Enable {
+			eglApi = egl.EGL_OPENGL_API
+		}
+		ctx, err := egl.NewContext(disp, eglApi)
 		if err != nil {
 			return nil, err
 		}
@@ -62,7 +68,9 @@ func (c *wlContext) SwapBuffers() error {
 }
 
 func (c *wlContext) SwapInterval(interval int) {
-	// It seems swapInterval is not supported on EGL.
+	if c.Context != nil {
+		c.Context.SwapInterval(interval)
+	}
 }
 
 func (c *wlContext) Refresh() error {

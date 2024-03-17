@@ -11,7 +11,6 @@ import (
 
 	"github.com/kanryu/mado"
 	"github.com/kanryu/mado/io/pointer"
-	"golang.org/x/sys/unix"
 )
 
 // ViewEvent provides handles to the underlying window objects for the
@@ -121,14 +120,14 @@ var xCursor = [...]string{
 }
 
 func GetTimerValue() uint64 {
-	return getTime(unix.CLOCK_MONOTONIC)
+	return getTime()
 }
 
 var qpFrequency uint64
 
 func GetTimerFrequency() uint64 {
 	if qpFrequency == 0 {
-		if getTime(unix.CLOCK_MONOTONIC) == 0 {
+		if getTime() == 0 {
 			qpFrequency = 1000000000
 		} else {
 			qpFrequency = 1000000

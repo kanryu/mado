@@ -14,6 +14,8 @@ import (
 	"github.com/kanryu/mado/internal/egl"
 )
 
+var _ mado.Context = (*x11Context)(nil)
+
 type x11Context struct {
 	win *x11Window
 	*egl.Context
@@ -25,7 +27,11 @@ type PlatformLibraryContextState struct{}
 func init() {
 	newX11EGLContext = func(w *x11Window) (mado.Context, error) {
 		disp := egl.NativeDisplayType(unsafe.Pointer(w.display()))
-		ctx, err := egl.NewContext(disp)
+		eglApi := egl.EGL_OPENGL_ES_API
+		if GlfwConfig.Enable {
+			eglApi = egl.EGL_OPENGL_API
+		}
+		ctx, err := egl.NewContext(disp, eglApi)
 		if err != nil {
 			return nil, err
 		}
@@ -48,7 +54,9 @@ func (c *x11Context) SwapBuffers() error {
 }
 
 func (c *x11Context) SwapInterval(interval int) {
-	// It seems swapInterval is not supported on EGL.
+	if c.Context != nil {
+		c.Context.SwapInterval(interval)
+	}
 }
 
 func (c *x11Context) Refresh() error {

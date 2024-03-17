@@ -73,7 +73,11 @@ func (c *Context) Present() error {
 	return nil
 }
 
-func NewContext(disp NativeDisplayType) (*Context, error) {
+func (c *Context) HasSurface() bool {
+	return c.eglSurf != nilEGLSurface
+}
+
+func NewContext(disp NativeDisplayType, eglApi uint) (*Context, error) {
 	if err := loadEGL(); err != nil {
 		return nil, err
 	}
@@ -87,7 +91,7 @@ func NewContext(disp NativeDisplayType) (*Context, error) {
 	if eglDisp == nilEGLDisplay {
 		return nil, fmt.Errorf("eglGetDisplay failed: 0x%x", eglGetError())
 	}
-	eglCtx, err := createContext(eglDisp)
+	eglCtx, err := createContext(eglDisp, eglApi)
 	if err != nil {
 		return nil, err
 	}
@@ -161,7 +165,16 @@ func (c *Context) SwapBuffers() error {
 	if ok {
 		return nil
 	}
+	fmt.Println("eglSwapBuffers", eglGetError())
 	return fmt.Errorf("eglSwapBuffers returned false")
+}
+
+func (c *Context) SwapInterval(interval int) error {
+	ok := eglSwapInterval(c.disp, _EGLint(interval))
+	if ok {
+		return nil
+	}
+	return fmt.Errorf("eglSwapInterval returned false")
 }
 
 func hasExtension(exts []string, ext string) bool {
@@ -173,7 +186,7 @@ func hasExtension(exts []string, ext string) bool {
 	return false
 }
 
-func createContext(disp _EGLDisplay) (*eglContext, error) {
+func createContext(disp _EGLDisplay, eglApi uint) (*eglContext, error) {
 	major, minor, ret := eglInitialize(disp)
 	if !ret {
 		return nil, fmt.Errorf("eglInitialize failed: 0x%x", eglGetError())
@@ -199,6 +212,12 @@ func createContext(disp _EGLDisplay) (*eglContext, error) {
 		}
 	}
 	attribs = append(attribs, _EGL_NONE)
+
+	ret = eglBindAPI(eglApi)
+	if !ret {
+		return nil, fmt.Errorf("eglBindAPI failed: 0x%x", eglGetError())
+	}
+
 	eglCfg, ret := eglChooseConfig(disp, attribs)
 	if !ret {
 		return nil, fmt.Errorf("eglChooseConfig failed: 0x%x", eglGetError())

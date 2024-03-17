@@ -20,6 +20,7 @@ package egl
 import "C"
 
 type (
+	_EGLenum          = C.EGLenum
 	_EGLint           = C.EGLint
 	_EGLDisplay       = C.EGLDisplay
 	_EGLConfig        = C.EGLConfig
@@ -29,8 +30,20 @@ type (
 	NativeWindowType  = C.EGLNativeWindowType
 )
 
+const (
+	EGL_OPENGL_API    uint = 0x30a2
+	EGL_OPENGL_ES_API uint = 0x30a0
+)
+
 func loadEGL() error {
 	return nil
+}
+
+func eglBindAPI(api uint) bool {
+	if C.eglBindAPI(_EGLenum(api)) != C.EGL_TRUE {
+		return false
+	}
+	return true
 }
 
 func eglChooseConfig(disp _EGLDisplay, attribs []_EGLint) (_EGLConfig, bool) {

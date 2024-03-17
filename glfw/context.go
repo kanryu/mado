@@ -12,6 +12,7 @@ func (w *Window) initContext() {
 		w.ctx = ctx
 		theApp.Ctx = ctx
 	}
+	w.ctx.Refresh()
 	panicError()
 }
 
