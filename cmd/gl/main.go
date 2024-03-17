@@ -43,21 +43,15 @@ func main() {
 		t := glfw.GetTime()
 		width, height := window.GetFramebufferSize()
 		gl.Viewport(0, 0, int32(width), int32(height))
-		fmt.Println("Viewport", gl.GetError())
 		// Clear color buffer to black
 		gl.ClearColor(0.0, 0.0, 0.0, 0.0)
-		fmt.Println("ClearColor", gl.GetError())
 		gl.Clear(gl.COLOR_BUFFER_BIT)
-		fmt.Println("Clear", gl.GetError())
 
 		// Select and setup the projection matrix
 		gl.MatrixMode(gl.PROJECTION)
-		fmt.Println("MatrixMode", gl.GetError())
 		gl.LoadIdentity()
-		fmt.Println("LoadIdentity", gl.GetError())
 		m1 := mgl32.Perspective(65.0, float32(width)/float32(height), 1.0, 100.0)
 		gl.LoadMatrixf(&m1[0])
-		fmt.Println("LoadMatrixf", gl.GetError())
 
 		// Select and setup the modelview matrix
 		gl.MatrixMode(gl.MODELVIEW)
@@ -73,7 +67,6 @@ func main() {
 		fmt.Println("Rotatef", gl.GetError())
 
 		gl.Begin(gl.TRIANGLES)
-		//fmt.Println("Begin", gl.GetError())
 		gl.Color3f(1.0, 0.0, 0.0)
 		gl.Vertex3f(-5.0, 0.0, -4.0)
 		gl.Color3f(0.0, 1.0, 0.0)
@@ -81,7 +74,6 @@ func main() {
 		gl.Color3f(0.0, 0.0, 1.0)
 		gl.Vertex3f(0.0, 0.0, 6.0)
 		gl.End()
-		fmt.Println("End", gl.GetError())
 
 		// Do OpenGL stuff.
 		window.SwapBuffers()
