@@ -414,6 +414,10 @@ func (d *wlDisplay) createNativeWindow(options []mado.Option) (*window, error) {
 	if d.decor != nil {
 		w.decor = C.zxdg_decoration_manager_v1_get_toplevel_decoration(d.decor, w.topLvl)
 		C.zxdg_toplevel_decoration_v1_add_listener(w.decor, &C.gio_zxdg_toplevel_decoration_v1_listener, unsafe.Pointer(w.surf))
+
+		if GlfwConfig.Enable {
+			C.zxdg_toplevel_decoration_v1_set_mode(w.decor, C.ZXDG_TOPLEVEL_DECORATION_V1_MODE_SERVER_SIDE)
+		}
 	}
 	w.updateOpaqueRegion()
 	return w, nil
