@@ -38,22 +38,70 @@ var (
 )
 
 const (
+	_EGL_CONFIG_CAVEAT = 0x3027
+
+	_EGL_SUCCESS                = 0x3000
+	_EGL_NOT_INITIALIZED        = 0x3001
+	_EGL_BAD_ACCESS             = 0x3002
+	_EGL_BAD_ALLOC              = 0x3003
+	_EGL_BAD_ATTRIBUTE          = 0x3004
+	_EGL_BAD_CONFIG             = 0x3005
+	_EGL_BAD_CONTEXT            = 0x3006
+	_EGL_BAD_CURRENT_SURFACE    = 0x3007
+	_EGL_BAD_DISPLAY            = 0x3008
+	_EGL_BAD_MATCH              = 0x3009
+	_EGL_BAD_NATIVE_PIXMAP      = 0x300a
+	_EGL_BAD_NATIVE_WINDOW      = 0x300b
+	_EGL_BAD_PARAMETER          = 0x300c
+	_EGL_BAD_SURFACE            = 0x300d
+	_EGL_CONTEXT_LOST           = 0x300e
+	_EGL_COLOR_BUFFER_TYPE      = 0x303f
+	_EGL_RGB_BUFFER             = 0x308e
+	_EGL_SURFACE_TYPE           = 0x3033
+	_EGL_WINDOW_BIT             = 0x0004
+	_EGL_RENDERABLE_TYPE        = 0x3040
+	_EGL_OPENGL_ES_BIT          = 0x0001
+	_EGL_OPENGL_ES2_BIT         = 0x0004
+	_EGL_OPENGL_BIT             = 0x0008
 	_EGL_ALPHA_SIZE             = 0x3021
 	_EGL_BLUE_SIZE              = 0x3022
-	_EGL_CONFIG_CAVEAT          = 0x3027
-	_EGL_CONTEXT_CLIENT_VERSION = 0x3098
-	_EGL_DEPTH_SIZE             = 0x3025
-	_EGL_GL_COLORSPACE_KHR      = 0x309d
-	_EGL_GL_COLORSPACE_SRGB_KHR = 0x3089
 	_EGL_GREEN_SIZE             = 0x3023
-	_EGL_EXTENSIONS             = 0x3055
-	_EGL_NATIVE_VISUAL_ID       = 0x302e
-	_EGL_NONE                   = 0x3038
-	_EGL_OPENGL_ES2_BIT         = 0x4
 	_EGL_RED_SIZE               = 0x3024
-	_EGL_RENDERABLE_TYPE        = 0x3040
-	_EGL_SURFACE_TYPE           = 0x3033
-	_EGL_WINDOW_BIT             = 0x4
+	_EGL_DEPTH_SIZE             = 0x3025
+	_EGL_STENCIL_SIZE           = 0x3026
+	_EGL_SAMPLES                = 0x3031
+	_EGL_OPENGL_ES_API          = 0x30a0
+	_EGL_OPENGL_API             = 0x30a2
+	_EGL_NONE                   = 0x3038
+	_EGL_RENDER_BUFFER          = 0x3086
+	_EGL_SINGLE_BUFFER          = 0x3085
+	_EGL_EXTENSIONS             = 0x3055
+	_EGL_CONTEXT_CLIENT_VERSION = 0x3098
+	_EGL_NATIVE_VISUAL_ID       = 0x302e
+	// _EGL_NO_SURFACE ((EGLSurface) = 0)
+	// _EGL_NO_DISPLAY ((EGLDisplay) = 0)
+	// _EGL_NO_CONTEXT ((EGLContext) = 0)
+	// _EGL_DEFAULT_DISPLAY ((EGLNativeDisplayType) = 0)
+
+	_EGL_CONTEXT_OPENGL_FORWARD_COMPATIBLE_BIT_KHR      = 0x00000002
+	_EGL_CONTEXT_OPENGL_CORE_PROFILE_BIT_KHR            = 0x00000001
+	_EGL_CONTEXT_OPENGL_COMPATIBILITY_PROFILE_BIT_KHR   = 0x00000002
+	_EGL_CONTEXT_OPENGL_DEBUG_BIT_KHR                   = 0x00000001
+	_EGL_CONTEXT_OPENGL_RESET_NOTIFICATION_STRATEGY_KHR = 0x31bd
+	_EGL_NO_RESET_NOTIFICATION_KHR                      = 0x31be
+	_EGL_LOSE_CONTEXT_ON_RESET_KHR                      = 0x31bf
+	_EGL_CONTEXT_OPENGL_ROBUST_ACCESS_BIT_KHR           = 0x00000004
+	_EGL_CONTEXT_MAJOR_VERSION_KHR                      = 0x3098
+	_EGL_CONTEXT_MINOR_VERSION_KHR                      = 0x30fb
+	_EGL_CONTEXT_OPENGL_PROFILE_MASK_KHR                = 0x30fd
+	_EGL_CONTEXT_FLAGS_KHR                              = 0x30fc
+	_EGL_CONTEXT_OPENGL_NO_ERROR_KHR                    = 0x31b3
+	_EGL_GL_COLORSPACE_KHR                              = 0x309d
+	_EGL_GL_COLORSPACE_SRGB_KHR                         = 0x3089
+	_EGL_CONTEXT_RELEASE_BEHAVIOR_KHR                   = 0x2097
+	_EGL_CONTEXT_RELEASE_BEHAVIOR_NONE_KHR              = 0
+	_EGL_CONTEXT_RELEASE_BEHAVIOR_FLUSH_KHR             = 0x2098
+	_EGL_PRESENT_OPAQUE_EXT                             = 0x31df
 )
 
 func (c *Context) Release() {
