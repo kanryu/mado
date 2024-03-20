@@ -4,6 +4,9 @@ import (
 	"errors"
 	"image"
 	"image/color"
+	"os"
+	"path/filepath"
+	"strings"
 
 	"github.com/kanryu/mado/gpu"
 	"github.com/kanryu/mado/io/key"
@@ -11,6 +14,39 @@ import (
 	"github.com/kanryu/mado/io/system"
 	"github.com/kanryu/mado/unit"
 )
+
+// errOutOfDate is reported when the GPU surface dimensions or properties no
+// longer match the window.
+var ErrOutOfDate = errors.New("app: GPU surface out of date")
+
+var OsMain func()
+var OsNewWindow func(window Callbacks, options []Option) error
+var EnablePollEvents func()
+var PollEvents func()
+var GetTimerValue func() uint64
+var GetTimerFrequency func() uint64
+
+// extraArgs contains extra arguments to append to
+// os.Args. The arguments are separated with |.
+// Useful for running programs on mobiles where the
+// command line is not available.
+// Set with the go linker flag -X.
+var extraArgs string
+
+// ID is the app id exposed to the platform.
+//
+// On Android ID is the package property of AndroidManifest.xml,
+// on iOS ID is the CFBundleIdentifier of the app Info.plist,
+// on Wayland it is the toplevel app_id,
+// on X11 it is the X11 XClassHint.
+//
+// ID is set by the [github.com/kanryu/mado/cmd/gogio] tool or manually with the -X linker flag. For example,
+//
+//	go build -ldflags="-X 'github.com/kanryu/mado/app.ID=org.gioui.example.Kitchen'" .
+//
+// Note that ID is treated as a constant, and that changing it at runtime
+// is not supported. The default value of ID is filepath.Base(os.Args[0]).
+var ID = ""
 
 // Config describes a Window configuration.
 type Config struct {
@@ -257,3 +293,13 @@ func WalkActions(actions system.Action, do func(system.Action)) {
 func (ConfigEvent) ImplementsEvent() {}
 func (WakeupEvent) ImplementsEvent() {}
 func (StageEvent) ImplementsEvent()  {}
+
+func init() {
+	if extraArgs != "" {
+		args := strings.Split(extraArgs, "|")
+		os.Args = append(os.Args, args...)
+	}
+	if ID == "" {
+		ID = filepath.Base(os.Args[0])
+	}
+}

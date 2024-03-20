@@ -5,7 +5,7 @@
 // +build !nox11
 // +build !noopengl
 
-package app
+package unix
 
 import (
 	"unsafe"
@@ -28,7 +28,7 @@ func init() {
 	newX11EGLContext = func(w *x11Window) (mado.Context, error) {
 		disp := egl.NativeDisplayType(unsafe.Pointer(w.display()))
 		eglApi := egl.EGL_OPENGL_ES_API
-		if GlfwConfig.Enable {
+		if mado.GlfwConfig.Enable {
 			eglApi = egl.EGL_OPENGL_API
 		}
 		ctx, err := egl.NewContext(disp, eglApi)

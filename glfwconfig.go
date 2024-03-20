@@ -3,7 +3,7 @@
 // SPDX-FileCopyrightText: 2006-2019 Camilla Löwy <elmindreda@glfw.org>
 // SPDX-FileCopyrightText: 2022 The Ebitengine Authors
 
-package app
+package mado
 
 import "runtime"
 
@@ -135,12 +135,12 @@ type GlfwContext struct {
 	Release    int
 
 	// TODO: Put these functions in an interface type.
-	makeCurrent        func(*Window) error
-	swapBuffers        func(*Window) error
-	swapInterval       func(int) error
-	extensionSupported func(string) bool
-	getProcAddress     func(string) uintptr
-	destroy            func(*Window) error
+	MakeCurrent        func(*Window) error
+	SwapBuffers        func(*Window) error
+	SwapInterval       func(int) error
+	ExtensionSupported func(string) bool
+	GetProcAddress     func(string) uintptr
+	Destroy            func(*Window) error
 
 	Platform PlatformContextState
 }
@@ -180,7 +180,7 @@ func intToBool(x int) bool {
 	return x != 0
 }
 
-func glfwconfiginit() {
+func GlfwConfigInit() {
 	// The default is OpenGL with minimum version 1.0
 	GlfwConfig.Hints.Context.Client = GLFW_OPENGL_API
 	switch {

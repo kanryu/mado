@@ -4,7 +4,7 @@
 // +build linux,!android freebsd openbsd
 // +build !nox11
 
-package app
+package unix
 
 /*
 #cgo freebsd openbsd CFLAGS: -I/usr/X11R6/include -I/usr/local/include
@@ -48,7 +48,7 @@ import (
 
 	syscall "golang.org/x/sys/unix"
 
-	"github.com/kanryu/mado/app/internal/xkb"
+	"github.com/kanryu/mado/unix/internal/xkb"
 )
 
 const (
@@ -813,7 +813,7 @@ func newX11Window(gioWin mado.Callbacks, options []mado.Option) error {
 	hints.flags = C.InputHint
 	C.XSetWMHints(dpy, win, &hints)
 
-	name := C.CString(ID)
+	name := C.CString(mado.ID)
 	defer C.free(unsafe.Pointer(name))
 	wmhints := C.XClassHint{name, name}
 	C.XSetClassHint(dpy, win, &wmhints)

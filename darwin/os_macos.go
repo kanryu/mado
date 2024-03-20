@@ -3,7 +3,7 @@
 //go:build darwin && !ios
 // +build darwin,!ios
 
-package app
+package darwin
 
 import (
 	"errors"
@@ -249,10 +249,18 @@ static bool isPreeditText(void) {
 */
 import "C"
 
-func init() {
+func InitDarwin() {
 	// Darwin requires that UI operations happen on the main thread only.
 	runtime.LockOSThread()
+	mado.OsMain = osMain
+	mado.OsNewWindow = newWindow
+	mado.EnablePollEvents = EnablePollEvents
+	mado.PollEvents = PollEvents
+	mado.GetTimerValue = GetTimerValue
+	mado.GetTimerFrequency = GetTimerFrequency
 }
+
+var _ mado.ViewEvent = (*ViewEvent)(nil)
 
 // ViewEvent notified the client of changes to the window AppKit handles.
 // The handles are retained until another ViewEvent is sent.
@@ -1112,4 +1120,5 @@ func convertMods(mods C.NSUInteger) key.Modifiers {
 	return kmods
 }
 
-func (ViewEvent) ImplementsEvent() {}
+func (ViewEvent) ImplementsEvent()     {}
+func (ViewEvent) ImplementsViewEvent() {}

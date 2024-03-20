@@ -2,7 +2,7 @@
 
 //go:build darwin && metal
 
-package app
+package darwin
 
 /*
 #cgo CFLAGS: -Werror -xobjective-c -fobjc-arc

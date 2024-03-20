@@ -2,7 +2,7 @@
 
 //go:build metal
 
-package app
+package darwin
 
 import (
 	"errors"

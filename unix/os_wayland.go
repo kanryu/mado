@@ -4,7 +4,7 @@
 // +build linux,!android freebsd
 // +build !nowayland
 
-package app
+package unix
 
 import (
 	"bytes"
@@ -23,7 +23,6 @@ import (
 	syscall "golang.org/x/sys/unix"
 
 	"github.com/kanryu/mado"
-	"github.com/kanryu/mado/app/internal/xkb"
 	"github.com/kanryu/mado/f32"
 	"github.com/kanryu/mado/internal/fling"
 	"github.com/kanryu/mado/io/key"
@@ -31,6 +30,7 @@ import (
 	"github.com/kanryu/mado/io/system"
 	"github.com/kanryu/mado/io/transfer"
 	"github.com/kanryu/mado/unit"
+	"github.com/kanryu/mado/unix/internal/xkb"
 )
 
 // Use wayland-scanner to generate glue code for the xdg-shell and xdg-decoration extensions.
@@ -375,7 +375,7 @@ func (d *wlDisplay) createNativeWindow(options []mado.Option) (*window, error) {
 		return nil, errors.New("wayland: xdg_surface_get_toplevel failed")
 	}
 
-	id := C.CString(ID)
+	id := C.CString(mado.ID)
 	defer C.free(unsafe.Pointer(id))
 	C.xdg_toplevel_set_app_id(w.topLvl, id)
 
@@ -415,7 +415,7 @@ func (d *wlDisplay) createNativeWindow(options []mado.Option) (*window, error) {
 		w.decor = C.zxdg_decoration_manager_v1_get_toplevel_decoration(d.decor, w.topLvl)
 		C.zxdg_toplevel_decoration_v1_add_listener(w.decor, &C.gio_zxdg_toplevel_decoration_v1_listener, unsafe.Pointer(w.surf))
 
-		if GlfwConfig.Enable {
+		if mado.GlfwConfig.Enable {
 			C.zxdg_toplevel_decoration_v1_set_mode(w.decor, C.ZXDG_TOPLEVEL_DECORATION_V1_MODE_SERVER_SIDE)
 		}
 	}
@@ -1622,7 +1622,8 @@ func (w *window) systemGesture() (*C.struct_wl_cursor, C.uint32_t) {
 	if w.config.Mode != mado.Windowed || w.config.Decorated {
 		return nil, 0
 	}
-	border := w.w.GetWindow().(*Window).Metric.Dp(3)
+	//border := w.w.GetWindow().(*app.Window).Metric.Dp(3)
+	border := 3
 	x, y, size := int(w.lastPos.X), int(w.lastPos.Y), w.config.Size
 	north := y <= border
 	south := y >= size.Y-border
