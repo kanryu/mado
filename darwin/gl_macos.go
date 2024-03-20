@@ -142,10 +142,7 @@ func (c *glContext) RefreshContextAttribs(ctxconfig *mado.CtxConfig) error {
 		return err
 	}
 	exts := strings.Split(f.GetString(gl.EXTENSIONS), " ")
-	fmt.Println("GetString(GL_EXTENSIONS)", exts)
-
 	glVer := f.GetString(gl.VERSION)
-	fmt.Println("GetString(GL_VERSION)", glVer)
 
 	prefixes := []string{
 		"OpenGL ES-CM ",

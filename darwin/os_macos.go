@@ -249,11 +249,15 @@ static bool isPreeditText(void) {
 */
 import "C"
 
-func init() {
+func InitDarwin() {
 	// Darwin requires that UI operations happen on the main thread only.
 	runtime.LockOSThread()
 	mado.OsMain = osMain
 	mado.OsNewWindow = newWindow
+	mado.EnablePollEvents = EnablePollEvents
+	mado.PollEvents = PollEvents
+	mado.GetTimerValue = GetTimerValue
+	mado.GetTimerFrequency = GetTimerFrequency
 }
 
 var _ mado.ViewEvent = (*ViewEvent)(nil)
@@ -1116,4 +1120,5 @@ func convertMods(mods C.NSUInteger) key.Modifiers {
 	return kmods
 }
 
-func (ViewEvent) ImplementsEvent() {}
+func (ViewEvent) ImplementsEvent()     {}
+func (ViewEvent) ImplementsViewEvent() {}
