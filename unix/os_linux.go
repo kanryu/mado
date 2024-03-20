@@ -1,6 +1,6 @@
 //go:build (darwin || (linux && !baremetal && !wasi && !wasm_unknown)) && !nintendoswitch
 
-package app
+package unix
 
 /*
 #include <time.h>

@@ -1,6 +1,9 @@
 // SPDX-License-Identifier: Unlicense OR MIT
 
-package app
+//go:build windows
+// +build windows
+
+package mswindows
 
 import (
 	"errors"
@@ -19,7 +22,7 @@ import (
 	syscall "golang.org/x/sys/windows"
 
 	"github.com/kanryu/mado"
-	"github.com/kanryu/mado/app/internal/windows"
+	"github.com/kanryu/mado/mswindows/internal/windows"
 	"github.com/kanryu/mado/unit"
 	gowindows "golang.org/x/sys/windows"
 
@@ -90,6 +93,11 @@ var resources struct {
 	cursor syscall.Handle
 	// hwnd of helper window
 	helperHwnd syscall.Handle
+}
+
+func init() {
+	mado.OsMain = osMain
+	mado.OsNewWindow = newWindow
 }
 
 var withPollEvents bool
@@ -710,7 +718,7 @@ func (w *window) NewContext() (mado.Context, error) {
 	})
 	var errs []string
 	for _, b := range drivers {
-		if GlfwConfig.Enable && b.name != "opengl" {
+		if mado.GlfwConfig.Enable && b.name != "opengl" {
 			continue
 		}
 		ctx, err := b.initializer(w)

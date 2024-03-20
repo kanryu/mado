@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: Unlicense OR MIT
 
-package app
+package darwin
 
 /*
 #include <Foundation/Foundation.h>

@@ -3,7 +3,7 @@
 //go:build darwin && !ios
 // +build darwin,!ios
 
-package app
+package darwin
 
 import (
 	"errors"
@@ -252,7 +252,11 @@ import "C"
 func init() {
 	// Darwin requires that UI operations happen on the main thread only.
 	runtime.LockOSThread()
+	mado.OsMain = osMain
+	mado.OsNewWindow = newWindow
 }
+
+var _ mado.ViewEvent = (*ViewEvent)(nil)
 
 // ViewEvent notified the client of changes to the window AppKit handles.
 // The handles are retained until another ViewEvent is sent.

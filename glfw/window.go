@@ -171,124 +171,124 @@ func WindowHint(hint Hint, value int) {
 	switch hint {
 	// Framebuffer
 	case RedBits:
-		app.GlfwConfig.Hints.Framebuffer.RedBits = value
+		mado.GlfwConfig.Hints.Framebuffer.RedBits = value
 		return
 	case GreenBits:
-		app.GlfwConfig.Hints.Framebuffer.GreenBits = value
+		mado.GlfwConfig.Hints.Framebuffer.GreenBits = value
 		return
 	case BlueBits:
-		app.GlfwConfig.Hints.Framebuffer.BlueBits = value
+		mado.GlfwConfig.Hints.Framebuffer.BlueBits = value
 		return
 	case AlphaBits:
-		app.GlfwConfig.Hints.Framebuffer.AlphaBits = value
+		mado.GlfwConfig.Hints.Framebuffer.AlphaBits = value
 		return
 	case DepthBits:
-		app.GlfwConfig.Hints.Framebuffer.DepthBits = value
+		mado.GlfwConfig.Hints.Framebuffer.DepthBits = value
 		return
 	case StencilBits:
-		app.GlfwConfig.Hints.Framebuffer.StencilBits = value
+		mado.GlfwConfig.Hints.Framebuffer.StencilBits = value
 		return
 	case AccumRedBits:
-		app.GlfwConfig.Hints.Framebuffer.AccumRedBits = value
+		mado.GlfwConfig.Hints.Framebuffer.AccumRedBits = value
 		return
 	case AccumGreenBits:
-		app.GlfwConfig.Hints.Framebuffer.AccumGreenBits = value
+		mado.GlfwConfig.Hints.Framebuffer.AccumGreenBits = value
 		return
 	case AccumBlueBits:
-		app.GlfwConfig.Hints.Framebuffer.AccumBlueBits = value
+		mado.GlfwConfig.Hints.Framebuffer.AccumBlueBits = value
 		return
 	case AccumAlphaBits:
-		app.GlfwConfig.Hints.Framebuffer.AccumAlphaBits = value
+		mado.GlfwConfig.Hints.Framebuffer.AccumAlphaBits = value
 		return
 	case AuxBuffers:
-		app.GlfwConfig.Hints.Framebuffer.AuxBuffers = value
+		mado.GlfwConfig.Hints.Framebuffer.AuxBuffers = value
 		return
 	case Stereo:
-		app.GlfwConfig.Hints.Framebuffer.Stereo = value != 0
+		mado.GlfwConfig.Hints.Framebuffer.Stereo = value != 0
 		return
 	case DoubleBuffer:
-		app.GlfwConfig.Hints.Framebuffer.Doublebuffer = value != 0
+		mado.GlfwConfig.Hints.Framebuffer.Doublebuffer = value != 0
 		return
 	case TransparentFramebuffer:
-		app.GlfwConfig.Hints.Framebuffer.Transparent = value != 0
+		mado.GlfwConfig.Hints.Framebuffer.Transparent = value != 0
 		return
 	case Samples:
-		app.GlfwConfig.Hints.Framebuffer.Samples = value
+		mado.GlfwConfig.Hints.Framebuffer.Samples = value
 		return
 	case SRGBCapable:
-		app.GlfwConfig.Hints.Framebuffer.SRGB = value != 0
+		mado.GlfwConfig.Hints.Framebuffer.SRGB = value != 0
 		return
 		// Window Styles
 	case Resizable:
-		app.GlfwConfig.Hints.Window.Resizable = value != 0
+		mado.GlfwConfig.Hints.Window.Resizable = value != 0
 		return
 	case Decorated:
-		app.GlfwConfig.Hints.Window.Decorated = value != 0
+		mado.GlfwConfig.Hints.Window.Decorated = value != 0
 		return
 	case Focused:
-		app.GlfwConfig.Hints.Window.Focused = value != 0
+		mado.GlfwConfig.Hints.Window.Focused = value != 0
 		return
 	case AutoIconify:
-		app.GlfwConfig.Hints.Window.AutoIconify = value != 0
+		mado.GlfwConfig.Hints.Window.AutoIconify = value != 0
 		return
 	case Floating:
-		app.GlfwConfig.Hints.Window.Floating = value != 0
+		mado.GlfwConfig.Hints.Window.Floating = value != 0
 		return
 	case Maximized:
-		app.GlfwConfig.Hints.Window.Maximized = value != 0
+		mado.GlfwConfig.Hints.Window.Maximized = value != 0
 		return
 	case Visible:
-		app.GlfwConfig.Hints.Window.Visible = value != 0
+		mado.GlfwConfig.Hints.Window.Visible = value != 0
 		return
 		// Cocoa(MacOS)
 	case CocoaRetinaFramebuffer:
-		app.GlfwConfig.Hints.Window.Ns.Retina = value != 0
+		mado.GlfwConfig.Hints.Window.Ns.Retina = value != 0
 		return
 	case CocoaGraphicsSwitching:
-		app.GlfwConfig.Hints.Context.Nsgl.Offline = value != 0
+		mado.GlfwConfig.Hints.Context.Nsgl.Offline = value != 0
 		return
 	case ScaleToMonitor:
-		app.GlfwConfig.Hints.Window.ScaleToMonitor = value != 0
+		mado.GlfwConfig.Hints.Window.ScaleToMonitor = value != 0
 		return
 	case CenterCursor:
-		app.GlfwConfig.Hints.Window.CenterCursor = value != 0
+		mado.GlfwConfig.Hints.Window.CenterCursor = value != 0
 		return
 	case FocusOnShow:
-		app.GlfwConfig.Hints.Window.FocusOnShow = value != 0
+		mado.GlfwConfig.Hints.Window.FocusOnShow = value != 0
 		return
 		// OpenGL API Context
 	case ClientAPI:
-		app.GlfwConfig.Hints.Context.Client = value
+		mado.GlfwConfig.Hints.Context.Client = value
 		return
 	case ContextCreationAPI:
-		app.GlfwConfig.Hints.Context.Source = value
+		mado.GlfwConfig.Hints.Context.Source = value
 		return
 	case ContextVersionMajor:
-		app.GlfwConfig.Hints.Context.Major = value
+		mado.GlfwConfig.Hints.Context.Major = value
 		return
 	case ContextVersionMinor:
-		app.GlfwConfig.Hints.Context.Minor = value
+		mado.GlfwConfig.Hints.Context.Minor = value
 		return
 	case ContextRobustness:
-		app.GlfwConfig.Hints.Context.Robustness = value
+		mado.GlfwConfig.Hints.Context.Robustness = value
 		return
 	case OpenGLForwardCompatible:
-		app.GlfwConfig.Hints.Context.Forward = value != 0
+		mado.GlfwConfig.Hints.Context.Forward = value != 0
 		return
 	case OpenGLDebugContext:
-		app.GlfwConfig.Hints.Context.Debug = value != 0
+		mado.GlfwConfig.Hints.Context.Debug = value != 0
 		return
 	case ContextNoError:
-		app.GlfwConfig.Hints.Context.Noerror = value != 0
+		mado.GlfwConfig.Hints.Context.Noerror = value != 0
 		return
 	case OpenGLProfile:
-		app.GlfwConfig.Hints.Context.Profile = value
+		mado.GlfwConfig.Hints.Context.Profile = value
 		return
 	case ContextReleaseBehavior:
-		app.GlfwConfig.Hints.Context.Release = value
+		mado.GlfwConfig.Hints.Context.Release = value
 		return
 	case RefreshRate:
-		app.GlfwConfig.Hints.RefreshRate = value
+		mado.GlfwConfig.Hints.RefreshRate = value
 		return
 	}
 	panic(fmt.Errorf("invalid window hint 0x%08X", int(hint)))
@@ -313,13 +313,13 @@ func WindowHint(hint Hint, value int) {
 func WindowHintString(hint Hint, value string) {
 	switch hint {
 	case CocoaFrameNAME:
-		app.GlfwConfig.Hints.Window.Ns.FrameName = value
+		mado.GlfwConfig.Hints.Window.Ns.FrameName = value
 		return
 	case X11ClassName:
-		app.GlfwConfig.Hints.Window.X11.ClassName = value
+		mado.GlfwConfig.Hints.Window.X11.ClassName = value
 		return
 	case X11InstanceName:
-		app.GlfwConfig.Hints.Window.X11.InstanceName = value
+		mado.GlfwConfig.Hints.Window.X11.InstanceName = value
 		return
 	}
 	panic(fmt.Errorf("invalid window hint string 0x%08X", int(hint)))

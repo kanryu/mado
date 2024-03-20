@@ -3,7 +3,7 @@
 //go:build windows
 // +build windows
 
-package app
+package mswindows
 
 import (
 	"fmt"
@@ -17,9 +17,9 @@ import (
 	"unsafe"
 
 	"github.com/kanryu/mado"
-	"github.com/kanryu/mado/app/internal/windows"
 	"github.com/kanryu/mado/gpu"
 	"github.com/kanryu/mado/internal/gl"
+	"github.com/kanryu/mado/mswindows/internal/windows"
 	winsyscall "golang.org/x/sys/windows"
 )
 
@@ -266,29 +266,6 @@ const (
 	EmptyHandle = winsyscall.Handle(0)
 )
 
-type PlatformContextState struct {
-	dc       winsyscall.Handle
-	handle   winsyscall.Handle
-	interval int
-}
-
-type PlatformLibraryContextState struct {
-	inited bool
-
-	EXT_swap_control               bool
-	EXT_colorspace                 bool
-	ARB_multisample                bool
-	ARB_framebuffer_sRGB           bool
-	EXT_framebuffer_sRGB           bool
-	ARB_pixel_format               bool
-	ARB_create_context             bool
-	ARB_create_context_profile     bool
-	EXT_create_context_es2_profile bool
-	ARB_create_context_robustness  bool
-	ARB_create_context_no_error    bool
-	ARB_context_flush_control      bool
-}
-
 const (
 	NotInitialized     = ErrorCode(0x00010001)
 	NoCurrentContext   = ErrorCode(0x00010002)
@@ -336,12 +313,12 @@ type glContext struct {
 	hglrc        winsyscall.Handle
 	prevHdc      winsyscall.Handle
 	prevHglrc    winsyscall.Handle
-	context      GlfwContext
+	context      mado.GlfwContext
 	doublebuffer bool
 }
 
 func init() {
-	glfwconfiginit()
+	mado.GlfwConfigInit()
 	drivers = append(drivers, gpuAPI{
 		priority: 2,
 		name:     "opengl",
@@ -375,12 +352,12 @@ func (c *glContext) createContext() error {
 	if err := c.initWGL(); err != nil {
 		panic(err)
 	}
-	if hglrc, err := c.createContextWGL(&GlfwConfig.Hints.Context, &GlfwConfig.Hints.Framebuffer); err != nil {
+	if hglrc, err := c.createContextWGL(&mado.GlfwConfig.Hints.Context, &mado.GlfwConfig.Hints.Framebuffer); err != nil {
 		panic(err)
 	} else {
 		c.hglrc = hglrc
 	}
-	if err := c.refreshContextAttribs(&GlfwConfig.Hints.Context); err != nil {
+	if err := c.refreshContextAttribs(&mado.GlfwConfig.Hints.Context); err != nil {
 		return err
 	}
 
@@ -392,7 +369,7 @@ func (c *glContext) SwapBuffers() error {
 }
 
 func (c *glContext) SwapInterval(interval int) {
-	if GlfwConfig.PlatformContext.EXT_swap_control {
+	if mado.GlfwConfig.PlatformContext.EXT_swap_control {
 		if err := gl.WglSwapIntervalEXT(int32(interval)); err != nil {
 			panic(err)
 		}
@@ -414,10 +391,10 @@ func (c *glContext) Present() error {
 }
 
 func (c *glContext) initWGL() error {
-	if GlfwConfig.PlatformContext.inited {
+	if mado.GlfwConfig.PlatformContext.Inited {
 		return nil
 	}
-	if err := checkValidContextConfig(&GlfwConfig.Hints.Context); err != nil {
+	if err := checkValidContextConfig(&mado.GlfwConfig.Hints.Context); err != nil {
 		return err
 	}
 	createHelperWindow()
@@ -463,18 +440,18 @@ func (c *glContext) initWGL() error {
 
 	// NOTE: gl.Wgl_ARB_extensions_string and gl.Wgl_EXT_extensions_string are not
 	//       checked below as we are already using them
-	GlfwConfig.PlatformContext.ARB_multisample = ExtensionSupportedWGL("WGL_ARB_multisample")
-	GlfwConfig.PlatformContext.ARB_framebuffer_sRGB = ExtensionSupportedWGL("WGL_ARB_framebuffer_sRGB")
-	GlfwConfig.PlatformContext.EXT_framebuffer_sRGB = ExtensionSupportedWGL("WGL_EXT_framebuffer_sRGB")
-	GlfwConfig.PlatformContext.ARB_create_context = ExtensionSupportedWGL("WGL_ARB_create_context")
-	GlfwConfig.PlatformContext.ARB_create_context_profile = ExtensionSupportedWGL("WGL_ARB_create_context_profile")
-	GlfwConfig.PlatformContext.EXT_create_context_es2_profile = ExtensionSupportedWGL("WGL_EXT_create_context_es2_profile")
-	GlfwConfig.PlatformContext.ARB_create_context_robustness = ExtensionSupportedWGL("WGL_ARB_create_context_robustness")
-	GlfwConfig.PlatformContext.ARB_create_context_no_error = ExtensionSupportedWGL("WGL_ARB_create_context_no_error")
-	GlfwConfig.PlatformContext.EXT_swap_control = ExtensionSupportedWGL("WGL_EXT_swap_control")
-	GlfwConfig.PlatformContext.EXT_colorspace = ExtensionSupportedWGL("WGL_EXT_colorspace")
-	GlfwConfig.PlatformContext.ARB_pixel_format = ExtensionSupportedWGL("WGL_ARB_pixel_format")
-	GlfwConfig.PlatformContext.ARB_context_flush_control = ExtensionSupportedWGL("WGL_ARB_context_flush_control")
+	mado.GlfwConfig.PlatformContext.ARB_multisample = ExtensionSupportedWGL("WGL_ARB_multisample")
+	mado.GlfwConfig.PlatformContext.ARB_framebuffer_sRGB = ExtensionSupportedWGL("WGL_ARB_framebuffer_sRGB")
+	mado.GlfwConfig.PlatformContext.EXT_framebuffer_sRGB = ExtensionSupportedWGL("WGL_EXT_framebuffer_sRGB")
+	mado.GlfwConfig.PlatformContext.ARB_create_context = ExtensionSupportedWGL("WGL_ARB_create_context")
+	mado.GlfwConfig.PlatformContext.ARB_create_context_profile = ExtensionSupportedWGL("WGL_ARB_create_context_profile")
+	mado.GlfwConfig.PlatformContext.EXT_create_context_es2_profile = ExtensionSupportedWGL("WGL_EXT_create_context_es2_profile")
+	mado.GlfwConfig.PlatformContext.ARB_create_context_robustness = ExtensionSupportedWGL("WGL_ARB_create_context_robustness")
+	mado.GlfwConfig.PlatformContext.ARB_create_context_no_error = ExtensionSupportedWGL("WGL_ARB_create_context_no_error")
+	mado.GlfwConfig.PlatformContext.EXT_swap_control = ExtensionSupportedWGL("WGL_EXT_swap_control")
+	mado.GlfwConfig.PlatformContext.EXT_colorspace = ExtensionSupportedWGL("WGL_EXT_colorspace")
+	mado.GlfwConfig.PlatformContext.ARB_pixel_format = ExtensionSupportedWGL("WGL_ARB_pixel_format")
+	mado.GlfwConfig.PlatformContext.ARB_context_flush_control = ExtensionSupportedWGL("WGL_ARB_context_flush_control")
 
 	if err := gl.WglMakeCurrent(pdc, prc); err != nil {
 		return err
@@ -483,11 +460,11 @@ func (c *glContext) initWGL() error {
 		return err
 	}
 	//windows.ReleaseDC(dc)
-	GlfwConfig.PlatformContext.inited = true
+	mado.GlfwConfig.PlatformContext.Inited = true
 	return nil
 }
 
-func (c *glContext) createContextWGL(ctxconfig *CtxConfig, fbconfig *FbConfig) (winsyscall.Handle, error) {
+func (c *glContext) createContextWGL(ctxconfig *mado.CtxConfig, fbconfig *mado.FbConfig) (winsyscall.Handle, error) {
 	share := EmptyHandle
 	// var share _HGLRC
 	// if ctxconfig.share != nil {
@@ -508,31 +485,31 @@ func (c *glContext) createContextWGL(ctxconfig *CtxConfig, fbconfig *FbConfig) (
 		return EmptyHandle, err
 	}
 
-	if ctxconfig.Client == OpenGLAPI {
-		if ctxconfig.Forward && !GlfwConfig.PlatformContext.ARB_create_context {
+	if ctxconfig.Client == mado.OpenGLAPI {
+		if ctxconfig.Forward && !mado.GlfwConfig.PlatformContext.ARB_create_context {
 			return EmptyHandle, fmt.Errorf("glfw: a forward compatible OpenGL context requested but WGL_ARB_create_context is unavailable: %w", VersionUnavailable)
 		}
 
-		if ctxconfig.Profile != 0 && !GlfwConfig.PlatformContext.ARB_create_context_profile {
+		if ctxconfig.Profile != 0 && !mado.GlfwConfig.PlatformContext.ARB_create_context_profile {
 			return EmptyHandle, fmt.Errorf("glfw: OpenGL profile requested but WGL_ARB_create_context_profile is unavailable: %w", VersionUnavailable)
 		}
 	} else {
-		if !GlfwConfig.PlatformContext.ARB_create_context || !GlfwConfig.PlatformContext.ARB_create_context_profile || !GlfwConfig.PlatformContext.EXT_create_context_es2_profile {
+		if !mado.GlfwConfig.PlatformContext.ARB_create_context || !mado.GlfwConfig.PlatformContext.ARB_create_context_profile || !mado.GlfwConfig.PlatformContext.EXT_create_context_es2_profile {
 			return EmptyHandle, fmt.Errorf("glfw: OpenGL ES requested but WGL_ARB_create_context_es2_profile is unavailable: %w", APIUnavailable)
 		}
 	}
 
-	if GlfwConfig.PlatformContext.ARB_create_context {
+	if mado.GlfwConfig.PlatformContext.ARB_create_context {
 		var flags int32
 		var mask int32
-		if ctxconfig.Client == OpenGLAPI {
+		if ctxconfig.Client == mado.OpenGLAPI {
 			if ctxconfig.Forward {
 				flags |= _WGL_CONTEXT_FORWARD_COMPATIBLE_BIT_ARB
 			}
 
-			if ctxconfig.Profile == OpenGLCoreProfile {
+			if ctxconfig.Profile == mado.OpenGLCoreProfile {
 				mask |= _WGL_CONTEXT_CORE_PROFILE_BIT_ARB
-			} else if ctxconfig.Profile == OpenGLCompatProfile {
+			} else if ctxconfig.Profile == mado.OpenGLCompatProfile {
 				mask |= _WGL_CONTEXT_COMPATIBILITY_PROFILE_BIT_ARB
 			}
 		} else {
@@ -545,10 +522,10 @@ func (c *glContext) createContextWGL(ctxconfig *CtxConfig, fbconfig *FbConfig) (
 
 		var attribs []int32
 		if ctxconfig.Robustness != 0 {
-			if GlfwConfig.PlatformContext.ARB_create_context_robustness {
-				if ctxconfig.Robustness == NoResetNotification {
+			if mado.GlfwConfig.PlatformContext.ARB_create_context_robustness {
+				if ctxconfig.Robustness == mado.NoResetNotification {
 					attribs = append(attribs, _WGL_CONTEXT_RESET_NOTIFICATION_STRATEGY_ARB, _WGL_NO_RESET_NOTIFICATION_ARB)
-				} else if ctxconfig.Robustness == LoseContextOnReset {
+				} else if ctxconfig.Robustness == mado.LoseContextOnReset {
 					attribs = append(attribs, _WGL_CONTEXT_RESET_NOTIFICATION_STRATEGY_ARB, _WGL_LOSE_CONTEXT_ON_RESET_ARB)
 				}
 				flags |= _WGL_CONTEXT_ROBUST_ACCESS_BIT_ARB
@@ -556,17 +533,17 @@ func (c *glContext) createContextWGL(ctxconfig *CtxConfig, fbconfig *FbConfig) (
 		}
 
 		if ctxconfig.Release != 0 {
-			if GlfwConfig.PlatformContext.ARB_context_flush_control {
-				if ctxconfig.Release == ReleaseBehaviorNone {
+			if mado.GlfwConfig.PlatformContext.ARB_context_flush_control {
+				if ctxconfig.Release == mado.ReleaseBehaviorNone {
 					attribs = append(attribs, _WGL_CONTEXT_RELEASE_BEHAVIOR_ARB, _WGL_CONTEXT_RELEASE_BEHAVIOR_NONE_ARB)
-				} else if ctxconfig.Release == ReleaseBehaviorFlush {
+				} else if ctxconfig.Release == mado.ReleaseBehaviorFlush {
 					attribs = append(attribs, _WGL_CONTEXT_RELEASE_BEHAVIOR_ARB, _WGL_CONTEXT_RELEASE_BEHAVIOR_FLUSH_ARB)
 				}
 			}
 		}
 
 		if ctxconfig.Noerror {
-			if GlfwConfig.PlatformContext.ARB_create_context_no_error {
+			if mado.GlfwConfig.PlatformContext.ARB_create_context_no_error {
 				attribs = append(attribs, _WGL_CONTEXT_OPENGL_NO_ERROR_ARB, 1)
 			}
 		}
@@ -589,14 +566,14 @@ func (c *glContext) createContextWGL(ctxconfig *CtxConfig, fbconfig *FbConfig) (
 
 		attribs = append(attribs, 0, 0)
 
-		c.context.extensionSupported = extensionSupportedWGL
+		c.context.ExtensionSupported = extensionSupportedWGL
 		return gl.WglCreateContextAttribsARB(c.win.hdc, share, &attribs[0])
 	} else {
 		return gl.WglCreateContext(c.win.hdc)
 	}
 }
 
-func (c *glContext) refreshContextAttribs(ctxconfig *CtxConfig) (ferr error) {
+func (c *glContext) refreshContextAttribs(ctxconfig *mado.CtxConfig) (ferr error) {
 	const (
 		GL_COLOR_BUFFER_BIT                    = 0x00004000
 		GL_CONTEXT_COMPATIBILITY_PROFILE_BIT   = 0x00000002
@@ -616,7 +593,7 @@ func (c *glContext) refreshContextAttribs(ctxconfig *CtxConfig) (ferr error) {
 	)
 
 	c.context.Source = ctxconfig.Source
-	c.context.Client = OpenGLAPI
+	c.context.Client = mado.OpenGLAPI
 
 	if err := c.Lock(); err != nil {
 		return err
@@ -631,7 +608,7 @@ func (c *glContext) refreshContextAttribs(ctxconfig *CtxConfig) (ferr error) {
 	r, _, _ := syscall.Syscall(getString, 1, uintptr(GL_VERSION), 0, 0)
 	version := bytePtrToString((*byte)(unsafe.Pointer(r)))
 	if version == "" {
-		if ctxconfig.Client == OpenGLAPI {
+		if ctxconfig.Client == mado.OpenGLAPI {
 			return fmt.Errorf("glfw: OpenGL version string retrieval is broken: %w", PlatformError)
 		} else {
 			return fmt.Errorf("glfw: OpenGL ES version string retrieval is broken: %w", PlatformError)
@@ -644,14 +621,14 @@ func (c *glContext) refreshContextAttribs(ctxconfig *CtxConfig) (ferr error) {
 		"OpenGL ES "} {
 		if strings.HasPrefix(version, prefix) {
 			version = version[len(prefix):]
-			c.context.Client = OpenGLESAPI
+			c.context.Client = mado.OpenGLESAPI
 			break
 		}
 	}
 
 	m := regexp.MustCompile(`^(\d+)(\.(\d+)(\.(\d+))?)?`).FindStringSubmatch(version)
 	if m == nil {
-		if c.context.Client == OpenGLAPI {
+		if c.context.Client == mado.OpenGLAPI {
 			return fmt.Errorf("glfw: no version found in OpenGL version string: %w", PlatformError)
 		} else {
 			return fmt.Errorf("glfw: no version found in OpenGL ES version string: %w", PlatformError)
@@ -669,7 +646,7 @@ func (c *glContext) refreshContextAttribs(ctxconfig *CtxConfig) (ferr error) {
 		// For API consistency, we emulate the behavior of the
 		// {GLX|WGL}_ARB_create_context extension and fail here
 
-		if c.context.Client == OpenGLAPI {
+		if c.context.Client == mado.OpenGLAPI {
 			return fmt.Errorf("glfw: requested OpenGL version %d.%d, got version %d.%d: %w", ctxconfig.Major, ctxconfig.Minor, c.context.Major, c.context.Minor, VersionUnavailable)
 		} else {
 			return fmt.Errorf("glfw: requested OpenGL ES version %d.%d, got version %d.%d: %w", ctxconfig.Major, ctxconfig.Minor, c.context.Major, c.context.Minor, VersionUnavailable)
@@ -687,7 +664,7 @@ func (c *glContext) refreshContextAttribs(ctxconfig *CtxConfig) (ferr error) {
 		}
 	}
 
-	if c.context.Client == OpenGLAPI {
+	if c.context.Client == mado.OpenGLAPI {
 		// Read back context flags (OpenGL 3.0 and above)
 		if c.context.Major >= 3 {
 			var flags int32
@@ -723,9 +700,9 @@ func (c *glContext) refreshContextAttribs(ctxconfig *CtxConfig) (ferr error) {
 			_, _, _ = syscall.Syscall(getIntegerv, GL_CONTEXT_PROFILE_MASK, uintptr(unsafe.Pointer(&mask)), 0, 0)
 
 			if mask&GL_CONTEXT_COMPATIBILITY_PROFILE_BIT != 0 {
-				c.context.Profile = OpenGLCompatProfile
+				c.context.Profile = mado.OpenGLCompatProfile
 			} else if mask&GL_CONTEXT_CORE_PROFILE_BIT != 0 {
-				c.context.Profile = OpenGLCoreProfile
+				c.context.Profile = mado.OpenGLCoreProfile
 			} else {
 				ok, err := c.ExtensionSupported("GL_ARB_compatibility")
 				if err != nil {
@@ -736,7 +713,7 @@ func (c *glContext) refreshContextAttribs(ctxconfig *CtxConfig) (ferr error) {
 					//       not being set in the context flags if an OpenGL 3.2+
 					//       context was created without having requested a specific
 					//       version
-					c.context.Profile = OpenGLCompatProfile
+					c.context.Profile = mado.OpenGLCompatProfile
 				}
 			}
 		}
@@ -754,9 +731,9 @@ func (c *glContext) refreshContextAttribs(ctxconfig *CtxConfig) (ferr error) {
 			_, _, _ = syscall.Syscall(getIntegerv, GL_RESET_NOTIFICATION_STRATEGY_ARB, uintptr(unsafe.Pointer(&strategy)), 0, 0)
 
 			if strategy == GL_LOSE_CONTEXT_ON_RESET_ARB {
-				c.context.Robustness = LoseContextOnReset
+				c.context.Robustness = mado.LoseContextOnReset
 			} else if strategy == GL_NO_RESET_NOTIFICATION_ARB {
-				c.context.Robustness = NoResetNotification
+				c.context.Robustness = mado.NoResetNotification
 			}
 		}
 	} else {
@@ -773,9 +750,9 @@ func (c *glContext) refreshContextAttribs(ctxconfig *CtxConfig) (ferr error) {
 			_, _, _ = syscall.Syscall(getIntegerv, GL_RESET_NOTIFICATION_STRATEGY_ARB, uintptr(unsafe.Pointer(&strategy)), 0, 0)
 
 			if strategy == GL_LOSE_CONTEXT_ON_RESET_ARB {
-				c.context.Robustness = LoseContextOnReset
+				c.context.Robustness = mado.LoseContextOnReset
 			} else if strategy == GL_NO_RESET_NOTIFICATION_ARB {
-				c.context.Robustness = NoResetNotification
+				c.context.Robustness = mado.NoResetNotification
 			}
 		}
 	}
@@ -789,9 +766,9 @@ func (c *glContext) refreshContextAttribs(ctxconfig *CtxConfig) (ferr error) {
 		_, _, _ = syscall.Syscall(getIntegerv, GL_CONTEXT_RELEASE_BEHAVIOR, uintptr(unsafe.Pointer(&behavior)), 0, 0)
 
 		if behavior == GL_NONE {
-			c.context.Release = ReleaseBehaviorNone
+			c.context.Release = mado.ReleaseBehaviorNone
 		} else if behavior == GL_CONTEXT_RELEASE_BEHAVIOR_FLUSH {
-			c.context.Release = ReleaseBehaviorFlush
+			c.context.Release = mado.ReleaseBehaviorFlush
 		}
 	}
 
@@ -804,11 +781,11 @@ func (c *glContext) refreshContextAttribs(ctxconfig *CtxConfig) (ferr error) {
 	return nil
 }
 
-func (w *window) choosePixelFormat(ctxconfig *CtxConfig, fbconfig_ *FbConfig) (int, error) {
+func (w *window) choosePixelFormat(ctxconfig *mado.CtxConfig, fbconfig_ *mado.FbConfig) (int, error) {
 	var nativeCount int32
 	var attribs []int32
 
-	if GlfwConfig.PlatformContext.ARB_pixel_format {
+	if mado.GlfwConfig.PlatformContext.ARB_pixel_format {
 		var attrib int32 = _WGL_NUMBER_PIXEL_FORMATS_ARB
 		if err := gl.WglGetPixelFormatAttribivARB(w.hdc, 1, 0, 1, &attrib, &nativeCount); err != nil {
 			return 0, err
@@ -838,16 +815,16 @@ func (w *window) choosePixelFormat(ctxconfig *CtxConfig, fbconfig_ *FbConfig) (i
 			_WGL_STEREO_ARB,
 			_WGL_DOUBLE_BUFFER_ARB)
 
-		if GlfwConfig.PlatformContext.ARB_multisample {
+		if mado.GlfwConfig.PlatformContext.ARB_multisample {
 			attribs = append(attribs, _WGL_SAMPLES_ARB)
 		}
 
-		if ctxconfig.Client == OpenGLAPI {
-			if GlfwConfig.PlatformContext.ARB_framebuffer_sRGB || GlfwConfig.PlatformContext.EXT_framebuffer_sRGB {
+		if ctxconfig.Client == mado.OpenGLAPI {
+			if mado.GlfwConfig.PlatformContext.ARB_framebuffer_sRGB || mado.GlfwConfig.PlatformContext.EXT_framebuffer_sRGB {
 				attribs = append(attribs, _WGL_FRAMEBUFFER_SRGB_CAPABLE_ARB)
 			}
 		} else {
-			if GlfwConfig.PlatformContext.EXT_colorspace {
+			if mado.GlfwConfig.PlatformContext.EXT_colorspace {
 				attribs = append(attribs, _WGL_COLORSPACE_EXT)
 			}
 		}
@@ -859,12 +836,12 @@ func (w *window) choosePixelFormat(ctxconfig *CtxConfig, fbconfig_ *FbConfig) (i
 		nativeCount = c
 	}
 
-	usableConfigs := make([]*FbConfig, 0, nativeCount)
+	usableConfigs := make([]*mado.FbConfig, 0, nativeCount)
 	for i := int32(0); i < nativeCount; i++ {
-		var u FbConfig
+		var u mado.FbConfig
 		pixelFormat := uintptr(i) + 1
 
-		if GlfwConfig.PlatformContext.ARB_pixel_format {
+		if mado.GlfwConfig.PlatformContext.ARB_pixel_format {
 			// Get pixel format attributes through "modern" extension
 			values := make([]int32, len(attribs))
 			if err := gl.WglGetPixelFormatAttribivARB(w.hdc, int32(pixelFormat), 0, uint32(len(attribs)), &attribs[0], &values[0]); err != nil {
@@ -910,18 +887,18 @@ func (w *window) choosePixelFormat(ctxconfig *CtxConfig, fbconfig_ *FbConfig) (i
 				u.Stereo = true
 			}
 
-			if GlfwConfig.PlatformContext.ARB_multisample {
+			if mado.GlfwConfig.PlatformContext.ARB_multisample {
 				u.Samples = int(findAttribValue(_WGL_SAMPLES_ARB))
 			}
 
-			if ctxconfig.Client == OpenGLAPI {
-				if GlfwConfig.PlatformContext.ARB_framebuffer_sRGB || GlfwConfig.PlatformContext.EXT_framebuffer_sRGB {
+			if ctxconfig.Client == mado.OpenGLAPI {
+				if mado.GlfwConfig.PlatformContext.ARB_framebuffer_sRGB || mado.GlfwConfig.PlatformContext.EXT_framebuffer_sRGB {
 					if findAttribValue(_WGL_FRAMEBUFFER_SRGB_CAPABLE_ARB) != 0 {
 						u.SRGB = true
 					}
 				}
 			} else {
-				if GlfwConfig.PlatformContext.EXT_colorspace {
+				if mado.GlfwConfig.PlatformContext.EXT_colorspace {
 					if findAttribValue(_WGL_COLORSPACE_EXT) == _WGL_COLORSPACE_SRGB_EXT {
 						u.SRGB = true
 					}
@@ -1071,26 +1048,26 @@ func findPixelFormatAttribValue(attribs []int32, values []int32, attrib int32) i
 	return 0
 }
 
-func checkValidContextConfig(ctxconfig *CtxConfig) error {
+func checkValidContextConfig(ctxconfig *mado.CtxConfig) error {
 	// if ctxconfig.share != nil {
 	// 	if ctxconfig.Client == NoAPI || ctxconfig.share.context.client == NoAPI {
 	// 		return NoWindowContext
 	// 	}
 	// }
 
-	if ctxconfig.Source != NativeContextAPI &&
-		ctxconfig.Source != EGLContextAPI &&
-		ctxconfig.Source != OSMesaContextAPI {
+	if ctxconfig.Source != mado.NativeContextAPI &&
+		ctxconfig.Source != mado.EGLContextAPI &&
+		ctxconfig.Source != mado.OSMesaContextAPI {
 		return fmt.Errorf("glfw: invalid context creation API 0x%08X: %w", ctxconfig.Source, InvalidEnum)
 	}
 
-	if ctxconfig.Client != NoAPI &&
-		ctxconfig.Client != OpenGLAPI &&
-		ctxconfig.Client != OpenGLESAPI {
+	if ctxconfig.Client != mado.NoAPI &&
+		ctxconfig.Client != mado.OpenGLAPI &&
+		ctxconfig.Client != mado.OpenGLESAPI {
 		return fmt.Errorf("glfw: invalid client API 0x%08X: %w", ctxconfig.Client, InvalidEnum)
 	}
 
-	if ctxconfig.Client == OpenGLAPI {
+	if ctxconfig.Client == mado.OpenGLAPI {
 		if (ctxconfig.Major < 1 || ctxconfig.Minor < 0) ||
 			(ctxconfig.Major == 1 && ctxconfig.Minor > 5) ||
 			(ctxconfig.Major == 2 && ctxconfig.Minor > 1) ||
@@ -1105,7 +1082,7 @@ func checkValidContextConfig(ctxconfig *CtxConfig) error {
 		}
 
 		if ctxconfig.Profile != 0 {
-			if ctxconfig.Profile != OpenGLCoreProfile && ctxconfig.Profile != OpenGLCompatProfile {
+			if ctxconfig.Profile != mado.OpenGLCoreProfile && ctxconfig.Profile != mado.OpenGLCompatProfile {
 				return fmt.Errorf("glfw: invalid OpenGL profile 0x%08X: %w", ctxconfig.Profile, InvalidEnum)
 			}
 
@@ -1121,7 +1098,7 @@ func checkValidContextConfig(ctxconfig *CtxConfig) error {
 			// Forward-compatible contexts are only defined for OpenGL version 3.0 and above
 			return fmt.Errorf("glfw: forward-compatibility is only defined for OpenGL version 3.0 and above: %w", InvalidValue)
 		}
-	} else if ctxconfig.Client == OpenGLESAPI {
+	} else if ctxconfig.Client == mado.OpenGLESAPI {
 		if ctxconfig.Major < 1 || ctxconfig.Minor < 0 ||
 			(ctxconfig.Major == 1 && ctxconfig.Minor > 1) ||
 			(ctxconfig.Major == 2 && ctxconfig.Minor > 0) {
@@ -1135,13 +1112,13 @@ func checkValidContextConfig(ctxconfig *CtxConfig) error {
 	}
 
 	if ctxconfig.Robustness != 0 {
-		if ctxconfig.Robustness != NoResetNotification && ctxconfig.Robustness != LoseContextOnReset {
+		if ctxconfig.Robustness != mado.NoResetNotification && ctxconfig.Robustness != mado.LoseContextOnReset {
 			return fmt.Errorf("glfw: invalid context robustness mode 0x%08X: %w", ctxconfig.Robustness, InvalidEnum)
 		}
 	}
 
 	if ctxconfig.Release != 0 {
-		if ctxconfig.Release != ReleaseBehaviorNone && ctxconfig.Release != ReleaseBehaviorFlush {
+		if ctxconfig.Release != mado.ReleaseBehaviorNone && ctxconfig.Release != mado.ReleaseBehaviorFlush {
 			return fmt.Errorf("glfw: invalid context release behavior 0x%08X: %w", ctxconfig.Release, InvalidEnum)
 		}
 	}
@@ -1149,12 +1126,12 @@ func checkValidContextConfig(ctxconfig *CtxConfig) error {
 	return nil
 }
 
-func chooseFBConfig(desired *FbConfig, alternatives []*FbConfig) *FbConfig {
+func chooseFBConfig(desired *mado.FbConfig, alternatives []*mado.FbConfig) *mado.FbConfig {
 	leastMissing := math.MaxInt32
 	leastColorDiff := math.MaxInt32
 	leastExtraDiff := math.MaxInt32
 
-	var closest *FbConfig
+	var closest *mado.FbConfig
 	for _, current := range alternatives {
 		if desired.Stereo && !current.Stereo {
 			// Stereo is a hard constraint
@@ -1198,17 +1175,17 @@ func chooseFBConfig(desired *FbConfig, alternatives []*FbConfig) *FbConfig {
 		// Calculate color channel size difference value
 		colorDiff := 0
 
-		if desired.RedBits != DontCare {
+		if desired.RedBits != mado.DontCare {
 			colorDiff += (desired.RedBits - current.RedBits) *
 				(desired.RedBits - current.RedBits)
 		}
 
-		if desired.GreenBits != DontCare {
+		if desired.GreenBits != mado.DontCare {
 			colorDiff += (desired.GreenBits - current.GreenBits) *
 				(desired.GreenBits - current.GreenBits)
 		}
 
-		if desired.BlueBits != DontCare {
+		if desired.BlueBits != mado.DontCare {
 			colorDiff += (desired.BlueBits - current.BlueBits) *
 				(desired.BlueBits - current.BlueBits)
 		}
@@ -1216,42 +1193,42 @@ func chooseFBConfig(desired *FbConfig, alternatives []*FbConfig) *FbConfig {
 		// Calculate non-color channel size difference value
 		extraDiff := 0
 
-		if desired.AlphaBits != DontCare {
+		if desired.AlphaBits != mado.DontCare {
 			extraDiff += (desired.AlphaBits - current.AlphaBits) *
 				(desired.AlphaBits - current.AlphaBits)
 		}
 
-		if desired.DepthBits != DontCare {
+		if desired.DepthBits != mado.DontCare {
 			extraDiff += (desired.DepthBits - current.DepthBits) *
 				(desired.DepthBits - current.DepthBits)
 		}
 
-		if desired.StencilBits != DontCare {
+		if desired.StencilBits != mado.DontCare {
 			extraDiff += (desired.StencilBits - current.StencilBits) *
 				(desired.StencilBits - current.StencilBits)
 		}
 
-		if desired.AccumRedBits != DontCare {
+		if desired.AccumRedBits != mado.DontCare {
 			extraDiff += (desired.AccumRedBits - current.AccumRedBits) *
 				(desired.AccumRedBits - current.AccumRedBits)
 		}
 
-		if desired.AccumGreenBits != DontCare {
+		if desired.AccumGreenBits != mado.DontCare {
 			extraDiff += (desired.AccumGreenBits - current.AccumGreenBits) *
 				(desired.AccumGreenBits - current.AccumGreenBits)
 		}
 
-		if desired.AccumBlueBits != DontCare {
+		if desired.AccumBlueBits != mado.DontCare {
 			extraDiff += (desired.AccumBlueBits - current.AccumBlueBits) *
 				(desired.AccumBlueBits - current.AccumBlueBits)
 		}
 
-		if desired.AccumAlphaBits != DontCare {
+		if desired.AccumAlphaBits != mado.DontCare {
 			extraDiff += (desired.AccumAlphaBits - current.AccumAlphaBits) *
 				(desired.AccumAlphaBits - current.AccumAlphaBits)
 		}
 
-		if desired.Samples != DontCare {
+		if desired.Samples != mado.DontCare {
 			extraDiff += (desired.Samples - current.Samples) *
 				(desired.Samples - current.Samples)
 		}
@@ -1288,7 +1265,7 @@ func (c *glContext) ExtensionSupported(extension string) (bool, error) {
 		GL_NUM_EXTENSIONS = 0x821D
 	)
 
-	if !GlfwConfig.Initialized {
+	if !mado.GlfwConfig.Initialized {
 		return false, NotInitialized
 	}
 
@@ -1338,7 +1315,7 @@ func (c *glContext) ExtensionSupported(extension string) (bool, error) {
 	}
 
 	// Check if extension is in the platform-specific string
-	return c.context.extensionSupported(extension), nil
+	return c.context.ExtensionSupported(extension), nil
 }
 
 // bytePtrToString takes a pointer to a sequence of text and returns the corresponding string.

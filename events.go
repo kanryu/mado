@@ -9,6 +9,13 @@ import (
 	"github.com/kanryu/mado/unit"
 )
 
+// ViewEvent provides handles to the underlying window objects for the
+// current display protocol.
+type ViewEvent interface {
+	ImplementsViewEvent()
+	ImplementsEvent()
+}
+
 // A FrameEvent requests a new frame in the form of a list of
 // operations that describes the window content.
 type FrameEvent struct {

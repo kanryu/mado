@@ -879,7 +879,7 @@ func (w *Window) ProcessEvent(d mado.Driver, e event.Event) bool {
 		w.DestroyGPU()
 		w.out <- e2
 		close(w.Destroy)
-	case ViewEvent:
+	case mado.ViewEvent:
 		w.out <- e2
 		w.WaitAck(d)
 	case mado.ConfigEvent:
@@ -933,7 +933,7 @@ func (w *Window) NextEvent() event.Event {
 	state := &w.EventState
 	if !state.Created {
 		state.Created = true
-		if err := newWindow(w.callbacks, state.InitialOpts); err != nil {
+		if err := mado.OsNewWindow(w.callbacks, state.InitialOpts); err != nil {
 			close(w.Destroy)
 			return mado.DestroyEvent{Err: err}
 		}

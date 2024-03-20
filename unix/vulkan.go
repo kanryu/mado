@@ -4,17 +4,18 @@
 // +build linux freebsd
 // +build !novulkan
 
-package app
+package unix
 
 import (
 	"errors"
 	"unsafe"
 
+	"github.com/kanryu/mado"
 	"github.com/kanryu/mado/gpu"
 	"github.com/kanryu/mado/internal/vk"
 )
 
-type vkContext struct {
+type VkContext struct {
 	physDev    vk.PhysicalDevice
 	inst       vk.Instance
 	dev        vk.Device
@@ -32,7 +33,7 @@ type vkContext struct {
 	presentIdx int
 }
 
-func newVulkanContext(inst vk.Instance, surf vk.Surface) (*vkContext, error) {
+func NewVulkanContext(inst vk.Instance, surf vk.Surface) (*VkContext, error) {
 	physDev, qFam, err := vk.ChoosePhysicalDevice(inst, surf)
 	if err != nil {
 		return nil, err
@@ -59,7 +60,7 @@ func newVulkanContext(inst vk.Instance, surf vk.Surface) (*vkContext, error) {
 		vk.DestroyDevice(dev)
 		return nil, err
 	}
-	c := &vkContext{
+	c := &VkContext{
 		physDev:    physDev,
 		inst:       inst,
 		dev:        dev,
@@ -72,7 +73,7 @@ func newVulkanContext(inst vk.Instance, surf vk.Surface) (*vkContext, error) {
 	return c, nil
 }
 
-func (c *vkContext) RenderTarget() (gpu.RenderTarget, error) {
+func (c *VkContext) RenderTarget() (gpu.RenderTarget, error) {
 	vk.WaitForFences(c.dev, c.fence)
 	vk.ResetFences(c.dev, c.fence)
 
@@ -90,7 +91,7 @@ func (c *vkContext) RenderTarget() (gpu.RenderTarget, error) {
 	}, nil
 }
 
-func (c *vkContext) api() gpu.API {
+func (c *VkContext) api() gpu.API {
 	return gpu.Vulkan{
 		PhysDevice:  unsafe.Pointer(c.physDev),
 		Device:      unsafe.Pointer(c.dev),
@@ -120,7 +121,7 @@ func mapSurfaceErr(err error) error {
 		// support transforming the output ourselves, so we'll live with it.
 		return nil
 	case vkErr == vk.ERROR_OUT_OF_DATE_KHR:
-		return errOutOfDate
+		return mado.ErrOutOfDate
 	case vkErr == vk.ERROR_SURFACE_LOST_KHR:
 		// Treating a lost surface as a lost device isn't accurate, but
 		// probably not worth optimizing.
@@ -129,7 +130,7 @@ func mapSurfaceErr(err error) error {
 	return mapErr(err)
 }
 
-func (c *vkContext) release() {
+func (c *VkContext) release() {
 	vk.DeviceWaitIdle(c.dev)
 
 	c.destroySwapchain()
@@ -137,14 +138,14 @@ func (c *vkContext) release() {
 	vk.DestroySemaphore(c.dev, c.acquireSem)
 	vk.DestroySemaphore(c.dev, c.presentSem)
 	vk.DestroyDevice(c.dev)
-	*c = vkContext{}
+	*c = VkContext{}
 }
 
-func (c *vkContext) present() error {
+func (c *VkContext) present() error {
 	return mapSurfaceErr(vk.PresentQueue(c.queue, c.swchain, c.presentSem, c.presentIdx))
 }
 
-func (c *vkContext) destroyImageViews() {
+func (c *VkContext) destroyImageViews() {
 	for _, f := range c.fbos {
 		vk.DestroyFramebuffer(c.dev, f)
 	}
@@ -155,7 +156,7 @@ func (c *vkContext) destroyImageViews() {
 	c.views = nil
 }
 
-func (c *vkContext) destroySwapchain() {
+func (c *VkContext) destroySwapchain() {
 	vk.DeviceWaitIdle(c.dev)
 
 	c.destroyImageViews()
@@ -165,7 +166,7 @@ func (c *vkContext) destroySwapchain() {
 	}
 }
 
-func (c *vkContext) refresh(surf vk.Surface, width, height int) error {
+func (c *VkContext) refresh(surf vk.Surface, width, height int) error {
 	vk.DeviceWaitIdle(c.dev)
 
 	c.destroyImageViews()
@@ -177,7 +178,7 @@ func (c *vkContext) refresh(surf vk.Surface, width, height int) error {
 	}
 	minExt, maxExt := caps.MinExtent(), caps.MaxExtent()
 	if width < minExt.X || maxExt.X < width || height < minExt.Y || maxExt.Y < height {
-		return errOutOfDate
+		return mado.ErrOutOfDate
 	}
 	swchain, imgs, format, err := vk.CreateSwapchain(c.physDev, c.dev, surf, width, height, c.swchain)
 	if c.swchain != 0 {

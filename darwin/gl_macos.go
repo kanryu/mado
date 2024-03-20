@@ -2,7 +2,7 @@
 
 //go:build darwin && !ios
 
-package app
+package darwin
 
 import (
 	"errors"
@@ -68,26 +68,19 @@ const (
 	NSOpenGLProfileVersion3_2Core             = 0x3200
 )
 
-type PlatformContextState struct {
-}
-
-type PlatformLibraryContextState struct {
-	inited bool
-}
-
 var _ mado.Context = (*glContext)(nil)
 
 type glContext struct {
 	c       *gl.Functions
 	ctx     C.CFTypeRef
 	view    C.CFTypeRef
-	context GlfwContext
+	context mado.GlfwContext
 
 	glFlush C.PFN_glFlush
 }
 
 func init() {
-	glfwconfiginit()
+	mado.GlfwConfigInit()
 }
 
 func newContext(w *window) (*glContext, error) {
@@ -117,7 +110,7 @@ func newContext(w *window) (*glContext, error) {
 	}
 	c.Lock()
 	defer c.Unlock()
-	err = c.RefreshContextAttribs(&GlfwConfig.Hints.Context)
+	err = c.RefreshContextAttribs(&mado.GlfwConfig.Hints.Context)
 	if err != nil {
 		return nil, err
 	}
@@ -139,11 +132,11 @@ func newGlContext() C.CFTypeRef {
 	// _glfw.hints.framebuffer.depthBits    = 24;
 	// _glfw.hints.framebuffer.stencilBits  = 8;
 	// _glfw.hints.framebuffer.doublebuffer = GLFW_TRUE;
-	attribs := makeGlV2Attributes(&GlfwConfig.Hints.Context, &GlfwConfig.Hints.Framebuffer)
+	attribs := makeGlV2Attributes(&mado.GlfwConfig.Hints.Context, &mado.GlfwConfig.Hints.Framebuffer)
 	return C.gio_createGLContext2((*C.uint)(unsafe.Pointer(&attribs[0])))
 }
 
-func (c *glContext) RefreshContextAttribs(ctxconfig *CtxConfig) error {
+func (c *glContext) RefreshContextAttribs(ctxconfig *mado.CtxConfig) error {
 	f, err := gl.NewFunctions(nil, false)
 	if err != nil {
 		return err
@@ -161,7 +154,7 @@ func (c *glContext) RefreshContextAttribs(ctxconfig *CtxConfig) error {
 	}
 	for _, pref := range prefixes {
 		if glVer[:len(pref)] == pref {
-			c.context.Client = GLFW_OPENGL_ES_API
+			c.context.Client = mado.GLFW_OPENGL_ES_API
 		}
 	}
 	ver, _, err := gl.ParseGLVersion(glVer)
@@ -179,7 +172,7 @@ func (c *glContext) RefreshContextAttribs(ctxconfig *CtxConfig) error {
 		// For API consistency, we emulate the behavior of the
 		// {GLX|WGL}_ARB_create_context extension and fail here
 
-		if c.context.Client == GLFW_OPENGL_API {
+		if c.context.Client == mado.GLFW_OPENGL_API {
 			return fmt.Errorf("Requested OpenGL version %i.%i, got version %i.%i",
 				ctxconfig.Major, ctxconfig.Minor,
 				c.context.Major, c.context.Minor,
@@ -214,15 +207,15 @@ func (c *glContext) RefreshContextAttribs(ctxconfig *CtxConfig) error {
 		(c.context.Major == 3 && c.context.Minor >= 2) {
 		mask := f.GetInteger(gl.CONTEXT_PROFILE_MASK)
 		if mask&gl.CONTEXT_COMPATIBILITY_PROFILE_BIT != 0 {
-			c.context.Profile = GLFW_OPENGL_COMPAT_PROFILE
+			c.context.Profile = mado.GLFW_OPENGL_COMPAT_PROFILE
 		} else if mask&gl.CONTEXT_CORE_PROFILE_BIT != 0 {
-			c.context.Profile = GLFW_OPENGL_CORE_PROFILE
+			c.context.Profile = mado.GLFW_OPENGL_CORE_PROFILE
 		} else if slices.Contains(exts, "GL_ARB_compatibility") {
 			// HACK: This is a workaround for the compatibility profile bit
 			//       not being set in the context flags if an OpenGL 3.2+
 			//       context was created without having requested a specific
 			//       version
-			c.context.Profile = GLFW_OPENGL_COMPAT_PROFILE
+			c.context.Profile = mado.GLFW_OPENGL_COMPAT_PROFILE
 		}
 	}
 
@@ -232,17 +225,17 @@ func (c *glContext) RefreshContextAttribs(ctxconfig *CtxConfig) error {
 		//       only present from 3.0 while the extension applies from 1.1
 		strategy := f.GetInteger(gl.RESET_NOTIFICATION_STRATEGY_ARB)
 		if strategy == gl.LOSE_CONTEXT_ON_RESET_ARB {
-			c.context.Robustness = GLFW_LOSE_CONTEXT_ON_RESET
+			c.context.Robustness = mado.GLFW_LOSE_CONTEXT_ON_RESET
 		} else if strategy == gl.NO_RESET_NOTIFICATION_ARB {
-			c.context.Robustness = GLFW_NO_RESET_NOTIFICATION
+			c.context.Robustness = mado.GLFW_NO_RESET_NOTIFICATION
 		}
 	}
 	if slices.Contains(exts, "GL_KHR_context_flush_control") {
 		behavior := f.GetInteger(gl.CONTEXT_RELEASE_BEHAVIOR)
 		if behavior == gl.ZERO {
-			c.context.Release = GLFW_RELEASE_BEHAVIOR_NONE
+			c.context.Release = mado.GLFW_RELEASE_BEHAVIOR_NONE
 		} else if behavior == gl.CONTEXT_RELEASE_BEHAVIOR_FLUSH {
-			c.context.Release = GLFW_RELEASE_BEHAVIOR_FLUSH
+			c.context.Release = mado.GLFW_RELEASE_BEHAVIOR_FLUSH
 		}
 	}
 	return nil
@@ -320,7 +313,7 @@ func (w *window) NewContext() (mado.Context, error) {
 	return newContext(w)
 }
 
-func makeGlV2Attributes(ctxconfig *CtxConfig, fbconfig *FbConfig) []NSOpenGLPixelFormatAttribute {
+func makeGlV2Attributes(ctxconfig *mado.CtxConfig, fbconfig *mado.FbConfig) []NSOpenGLPixelFormatAttribute {
 	attribs := []NSOpenGLPixelFormatAttribute{
 		NSOpenGLPFAAccelerated,
 		NSOpenGLPFAClosestPolicy,
@@ -341,14 +334,14 @@ func makeGlV2Attributes(ctxconfig *CtxConfig, fbconfig *FbConfig) []NSOpenGLPixe
 		attribs = append(attribs, NSOpenGLPFAOpenGLProfile, NSOpenGLProfileVersion3_2Core)
 	}
 	if ctxconfig.Major <= 2 {
-		if fbconfig.AuxBuffers != GLFW_DONT_CARE {
+		if fbconfig.AuxBuffers != mado.GLFW_DONT_CARE {
 			attribs = append(attribs, NSOpenGLPFAAuxBuffers, NSOpenGLPixelFormatAttribute(fbconfig.AuxBuffers))
 		}
 
-		if fbconfig.AccumRedBits != GLFW_DONT_CARE &&
-			fbconfig.AccumGreenBits != GLFW_DONT_CARE &&
-			fbconfig.AccumBlueBits != GLFW_DONT_CARE &&
-			fbconfig.AccumAlphaBits != GLFW_DONT_CARE {
+		if fbconfig.AccumRedBits != mado.GLFW_DONT_CARE &&
+			fbconfig.AccumGreenBits != mado.GLFW_DONT_CARE &&
+			fbconfig.AccumBlueBits != mado.GLFW_DONT_CARE &&
+			fbconfig.AccumAlphaBits != mado.GLFW_DONT_CARE {
 			accumBits := fbconfig.AccumRedBits +
 				fbconfig.AccumGreenBits +
 				fbconfig.AccumBlueBits +
@@ -358,9 +351,9 @@ func makeGlV2Attributes(ctxconfig *CtxConfig, fbconfig *FbConfig) []NSOpenGLPixe
 		}
 	}
 
-	if fbconfig.RedBits != GLFW_DONT_CARE &&
-		fbconfig.GreenBits != GLFW_DONT_CARE &&
-		fbconfig.BlueBits != GLFW_DONT_CARE {
+	if fbconfig.RedBits != mado.GLFW_DONT_CARE &&
+		fbconfig.GreenBits != mado.GLFW_DONT_CARE &&
+		fbconfig.BlueBits != mado.GLFW_DONT_CARE {
 		colorBits := fbconfig.RedBits +
 			fbconfig.GreenBits +
 			fbconfig.BlueBits
@@ -376,20 +369,20 @@ func makeGlV2Attributes(ctxconfig *CtxConfig, fbconfig *FbConfig) []NSOpenGLPixe
 		attribs = append(attribs, NSOpenGLPFAColorSize, NSOpenGLPixelFormatAttribute(colorBits))
 	}
 
-	if fbconfig.AlphaBits != GLFW_DONT_CARE {
+	if fbconfig.AlphaBits != mado.GLFW_DONT_CARE {
 		attribs = append(attribs, NSOpenGLPFAAlphaSize, NSOpenGLPixelFormatAttribute(fbconfig.AlphaBits))
 	}
-	if fbconfig.DepthBits != GLFW_DONT_CARE {
+	if fbconfig.DepthBits != mado.GLFW_DONT_CARE {
 		attribs = append(attribs, NSOpenGLPFADepthSize, NSOpenGLPixelFormatAttribute(fbconfig.DepthBits))
 	}
-	if fbconfig.StencilBits != GLFW_DONT_CARE {
+	if fbconfig.StencilBits != mado.GLFW_DONT_CARE {
 		attribs = append(attribs, NSOpenGLPFAStencilSize, NSOpenGLPixelFormatAttribute(fbconfig.StencilBits))
 	}
 	if fbconfig.Doublebuffer {
 		attribs = append(attribs, NSOpenGLPFADoubleBuffer)
 	}
 
-	if fbconfig.Samples != GLFW_DONT_CARE {
+	if fbconfig.Samples != mado.GLFW_DONT_CARE {
 		if fbconfig.Samples == 0 {
 			attribs = append(attribs, NSOpenGLPFASampleBuffers, 0)
 		} else {

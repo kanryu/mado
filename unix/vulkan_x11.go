@@ -5,7 +5,7 @@
 // +build !nox11
 // +build !novulkan
 
-package app
+package unix
 
 import (
 	"unsafe"
@@ -19,7 +19,7 @@ type x11VkContext struct {
 	win  *x11Window
 	inst vk.Instance
 	surf vk.Surface
-	ctx  *vkContext
+	ctx  *VkContext
 }
 
 func init() {
@@ -35,7 +35,7 @@ func init() {
 			vk.DestroyInstance(inst)
 			return nil, err
 		}
-		ctx, err := newVulkanContext(inst, surf)
+		ctx, err := NewVulkanContext(inst, surf)
 		if err != nil {
 			vk.DestroySurface(inst, surf)
 			vk.DestroyInstance(inst)

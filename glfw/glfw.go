@@ -129,13 +129,13 @@ func (a *Application) Wait() {
 //
 // This function may only be called from the main thread.
 func Init() error {
-	app.GlfwConfig.Enable = true
-	app.EnablePollEvents()
+	mado.GlfwConfig.Enable = true
+	mado.EnablePollEvents()
 	app.Main()
 
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt)
 	theApp = NewApplication(ctx, stop)
-	app.GlfwConfig.Initialized = true
+	mado.GlfwConfig.Initialized = true
 	return acceptError(APIUnavailable)
 }
 
@@ -164,7 +164,7 @@ func Terminate() {
 //
 // This function may only be called from the main thread.
 func PollEvents() {
-	app.PollEvents()
+	mado.PollEvents()
 	panicError()
 }
 
@@ -284,8 +284,8 @@ func SetClipboardString(str string) {
 // of a few micro- or nanoseconds. It uses the highest-resolution monotonic time
 // source on each supported platform.
 func GetTime() float64 {
-	tm := app.GetTimerValue()
-	freq := app.GetTimerFrequency()
+	tm := mado.GetTimerValue()
+	freq := mado.GetTimerFrequency()
 	ret := float64(tm) / float64(freq)
 	panicError()
 	return ret
