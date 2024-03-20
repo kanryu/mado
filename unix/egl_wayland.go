@@ -12,7 +12,7 @@ import (
 	"unsafe"
 
 	"github.com/kanryu/mado"
-	"github.com/kanryu/mado/internal/egl"
+	"github.com/kanryu/mado/unix/internal/egl"
 )
 
 /*

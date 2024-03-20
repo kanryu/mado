@@ -7,7 +7,6 @@ package mswindows
 
 import (
 	"fmt"
-	"math"
 	"regexp"
 	"runtime"
 	"strconv"
@@ -956,7 +955,7 @@ func (w *window) choosePixelFormat(ctxconfig *mado.CtxConfig, fbconfig_ *mado.Fb
 		return 0, fmt.Errorf("glfw: the driver does not appear to support OpenGL")
 	}
 
-	closest := chooseFBConfig(fbconfig_, usableConfigs)
+	closest := mado.ChooseFBConfig(fbconfig_, usableConfigs)
 	if closest == nil {
 		return 0, fmt.Errorf("glfw: failed to find a suitable pixel format")
 	}
@@ -1124,139 +1123,6 @@ func checkValidContextConfig(ctxconfig *mado.CtxConfig) error {
 	}
 
 	return nil
-}
-
-func chooseFBConfig(desired *mado.FbConfig, alternatives []*mado.FbConfig) *mado.FbConfig {
-	leastMissing := math.MaxInt32
-	leastColorDiff := math.MaxInt32
-	leastExtraDiff := math.MaxInt32
-
-	var closest *mado.FbConfig
-	for _, current := range alternatives {
-		if desired.Stereo && !current.Stereo {
-			// Stereo is a hard constraint
-			continue
-		}
-
-		// Count number of missing buffers
-		missing := 0
-
-		if desired.AlphaBits > 0 && current.AlphaBits == 0 {
-			missing++
-		}
-
-		if desired.DepthBits > 0 && current.DepthBits == 0 {
-			missing++
-		}
-
-		if desired.StencilBits > 0 && current.StencilBits == 0 {
-			missing++
-		}
-
-		if desired.AuxBuffers > 0 &&
-			current.AuxBuffers < desired.AuxBuffers {
-			missing += desired.AuxBuffers - current.AuxBuffers
-		}
-
-		if desired.Samples > 0 && current.Samples == 0 {
-			// Technically, several multisampling buffers could be
-			// involved, but that's a lower level implementation detail and
-			// not important to us here, so we count them as one
-			missing++
-		}
-
-		if desired.Transparent != current.Transparent {
-			missing++
-		}
-
-		// These polynomials make many small channel size differences matter
-		// less than one large channel size difference
-
-		// Calculate color channel size difference value
-		colorDiff := 0
-
-		if desired.RedBits != mado.DontCare {
-			colorDiff += (desired.RedBits - current.RedBits) *
-				(desired.RedBits - current.RedBits)
-		}
-
-		if desired.GreenBits != mado.DontCare {
-			colorDiff += (desired.GreenBits - current.GreenBits) *
-				(desired.GreenBits - current.GreenBits)
-		}
-
-		if desired.BlueBits != mado.DontCare {
-			colorDiff += (desired.BlueBits - current.BlueBits) *
-				(desired.BlueBits - current.BlueBits)
-		}
-
-		// Calculate non-color channel size difference value
-		extraDiff := 0
-
-		if desired.AlphaBits != mado.DontCare {
-			extraDiff += (desired.AlphaBits - current.AlphaBits) *
-				(desired.AlphaBits - current.AlphaBits)
-		}
-
-		if desired.DepthBits != mado.DontCare {
-			extraDiff += (desired.DepthBits - current.DepthBits) *
-				(desired.DepthBits - current.DepthBits)
-		}
-
-		if desired.StencilBits != mado.DontCare {
-			extraDiff += (desired.StencilBits - current.StencilBits) *
-				(desired.StencilBits - current.StencilBits)
-		}
-
-		if desired.AccumRedBits != mado.DontCare {
-			extraDiff += (desired.AccumRedBits - current.AccumRedBits) *
-				(desired.AccumRedBits - current.AccumRedBits)
-		}
-
-		if desired.AccumGreenBits != mado.DontCare {
-			extraDiff += (desired.AccumGreenBits - current.AccumGreenBits) *
-				(desired.AccumGreenBits - current.AccumGreenBits)
-		}
-
-		if desired.AccumBlueBits != mado.DontCare {
-			extraDiff += (desired.AccumBlueBits - current.AccumBlueBits) *
-				(desired.AccumBlueBits - current.AccumBlueBits)
-		}
-
-		if desired.AccumAlphaBits != mado.DontCare {
-			extraDiff += (desired.AccumAlphaBits - current.AccumAlphaBits) *
-				(desired.AccumAlphaBits - current.AccumAlphaBits)
-		}
-
-		if desired.Samples != mado.DontCare {
-			extraDiff += (desired.Samples - current.Samples) *
-				(desired.Samples - current.Samples)
-		}
-
-		if desired.SRGB && !current.SRGB {
-			extraDiff++
-		}
-
-		// Figure out if the current one is better than the best one found so far
-		// Least number of missing buffers is the most important heuristic,
-		// then color buffer size match and lastly size match for other buffers
-
-		if missing < leastMissing {
-			closest = current
-		} else if missing == leastMissing {
-			if (colorDiff < leastColorDiff) || (colorDiff == leastColorDiff && extraDiff < leastExtraDiff) {
-				closest = current
-			}
-		}
-
-		if current == closest {
-			leastMissing = missing
-			leastColorDiff = colorDiff
-			leastExtraDiff = extraDiff
-		}
-	}
-
-	return closest
 }
 
 func (c *glContext) ExtensionSupported(extension string) (bool, error) {

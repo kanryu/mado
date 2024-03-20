@@ -11,14 +11,14 @@ import (
 	"unsafe"
 
 	"github.com/kanryu/mado"
-	"github.com/kanryu/mado/internal/egl"
+	"github.com/kanryu/mado/unix/internal/egl"
 )
 
 var _ mado.Context = (*x11Context)(nil)
 
 type x11Context struct {
 	win *x11Window
-	*egl.Context
+	*Context
 }
 
 type PlatformContextState struct{}
@@ -31,7 +31,7 @@ func init() {
 		if mado.GlfwConfig.Enable {
 			eglApi = egl.EGL_OPENGL_API
 		}
-		ctx, err := egl.NewContext(disp, eglApi)
+		ctx, err := NewContext(disp, eglApi)
 		if err != nil {
 			return nil, err
 		}

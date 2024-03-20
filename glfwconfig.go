@@ -5,7 +5,10 @@
 
 package mado
 
-import "runtime"
+import (
+	"math"
+	"runtime"
+)
 
 const (
 	_GLFW_INSERT_FIRST = 0
@@ -216,4 +219,137 @@ func GlfwConfigInit() {
 	// The default is to use full Retina resolution framebuffers
 	GlfwConfig.Hints.Window.Ns.Retina = GLFW_TRUE
 
+}
+
+func ChooseFBConfig(desired *FbConfig, alternatives []*FbConfig) *FbConfig {
+	leastMissing := math.MaxInt32
+	leastColorDiff := math.MaxInt32
+	leastExtraDiff := math.MaxInt32
+
+	var closest *FbConfig
+	for _, current := range alternatives {
+		if desired.Stereo && !current.Stereo {
+			// Stereo is a hard constraint
+			continue
+		}
+
+		// Count number of missing buffers
+		missing := 0
+
+		if desired.AlphaBits > 0 && current.AlphaBits == 0 {
+			missing++
+		}
+
+		if desired.DepthBits > 0 && current.DepthBits == 0 {
+			missing++
+		}
+
+		if desired.StencilBits > 0 && current.StencilBits == 0 {
+			missing++
+		}
+
+		if desired.AuxBuffers > 0 &&
+			current.AuxBuffers < desired.AuxBuffers {
+			missing += desired.AuxBuffers - current.AuxBuffers
+		}
+
+		if desired.Samples > 0 && current.Samples == 0 {
+			// Technically, several multisampling buffers could be
+			// involved, but that's a lower level implementation detail and
+			// not important to us here, so we count them as one
+			missing++
+		}
+
+		if desired.Transparent != current.Transparent {
+			missing++
+		}
+
+		// These polynomials make many small channel size differences matter
+		// less than one large channel size difference
+
+		// Calculate color channel size difference value
+		colorDiff := 0
+
+		if desired.RedBits != DontCare {
+			colorDiff += (desired.RedBits - current.RedBits) *
+				(desired.RedBits - current.RedBits)
+		}
+
+		if desired.GreenBits != DontCare {
+			colorDiff += (desired.GreenBits - current.GreenBits) *
+				(desired.GreenBits - current.GreenBits)
+		}
+
+		if desired.BlueBits != DontCare {
+			colorDiff += (desired.BlueBits - current.BlueBits) *
+				(desired.BlueBits - current.BlueBits)
+		}
+
+		// Calculate non-color channel size difference value
+		extraDiff := 0
+
+		if desired.AlphaBits != DontCare {
+			extraDiff += (desired.AlphaBits - current.AlphaBits) *
+				(desired.AlphaBits - current.AlphaBits)
+		}
+
+		if desired.DepthBits != DontCare {
+			extraDiff += (desired.DepthBits - current.DepthBits) *
+				(desired.DepthBits - current.DepthBits)
+		}
+
+		if desired.StencilBits != DontCare {
+			extraDiff += (desired.StencilBits - current.StencilBits) *
+				(desired.StencilBits - current.StencilBits)
+		}
+
+		if desired.AccumRedBits != DontCare {
+			extraDiff += (desired.AccumRedBits - current.AccumRedBits) *
+				(desired.AccumRedBits - current.AccumRedBits)
+		}
+
+		if desired.AccumGreenBits != DontCare {
+			extraDiff += (desired.AccumGreenBits - current.AccumGreenBits) *
+				(desired.AccumGreenBits - current.AccumGreenBits)
+		}
+
+		if desired.AccumBlueBits != DontCare {
+			extraDiff += (desired.AccumBlueBits - current.AccumBlueBits) *
+				(desired.AccumBlueBits - current.AccumBlueBits)
+		}
+
+		if desired.AccumAlphaBits != DontCare {
+			extraDiff += (desired.AccumAlphaBits - current.AccumAlphaBits) *
+				(desired.AccumAlphaBits - current.AccumAlphaBits)
+		}
+
+		if desired.Samples != DontCare {
+			extraDiff += (desired.Samples - current.Samples) *
+				(desired.Samples - current.Samples)
+		}
+
+		if desired.SRGB && !current.SRGB {
+			extraDiff++
+		}
+
+		// Figure out if the current one is better than the best one found so far
+		// Least number of missing buffers is the most important heuristic,
+		// then color buffer size match and lastly size match for other buffers
+
+		if missing < leastMissing {
+			closest = current
+		} else if missing == leastMissing {
+			if (colorDiff < leastColorDiff) || (colorDiff == leastColorDiff && extraDiff < leastExtraDiff) {
+				closest = current
+			}
+		}
+
+		if current == closest {
+			leastMissing = missing
+			leastColorDiff = colorDiff
+			leastExtraDiff = extraDiff
+		}
+	}
+
+	return closest
 }

@@ -38,6 +38,8 @@ func (WaylandViewEvent) ImplementsEvent()     {}
 var withPollEvents bool
 
 func InitUnix() {
+	mado.GlfwConfigInit()
+
 	mado.OsMain = osMain
 	mado.OsNewWindow = newWindow
 	mado.EnablePollEvents = EnablePollEvents

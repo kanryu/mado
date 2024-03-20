@@ -20,103 +20,119 @@ package egl
 import "C"
 
 type (
-	_EGLenum          = C.EGLenum
-	_EGLint           = C.EGLint
-	_EGLDisplay       = C.EGLDisplay
-	_EGLConfig        = C.EGLConfig
-	_EGLContext       = C.EGLContext
-	_EGLSurface       = C.EGLSurface
+	EGLenum           = C.EGLenum
+	EGLint            = C.EGLint
+	EGLDisplay        = C.EGLDisplay
+	EGLConfig         = C.EGLConfig
+	EGLContext        = C.EGLContext
+	EGLSurface        = C.EGLSurface
 	NativeDisplayType = C.EGLNativeDisplayType
 	NativeWindowType  = C.EGLNativeWindowType
 )
 
-const (
-	EGL_OPENGL_API    uint = 0x30a2
-	EGL_OPENGL_ES_API uint = 0x30a0
-)
-
-func loadEGL() error {
+func LoadEGL() error {
 	return nil
 }
 
-func eglBindAPI(api uint) bool {
-	if C.eglBindAPI(_EGLenum(api)) != C.EGL_TRUE {
+func EglBindAPI(api uint) bool {
+	if C.eglBindAPI(EGLenum(api)) != C.EGL_TRUE {
 		return false
 	}
 	return true
 }
 
-func eglChooseConfig(disp _EGLDisplay, attribs []_EGLint) (_EGLConfig, bool) {
+func EglGetConfigs(disp EGLDisplay, configs []EGLConfig, configSize int, numConfig *int) bool {
+	var num_config EGLint
+	config_size := EGLint(configSize)
+	if configs == nil {
+		if C.eglGetConfigs(disp, nil, 0, &num_config) != C.EGL_TRUE {
+			return false
+		}
+		if numConfig != nil {
+			*numConfig = int(num_config)
+		}
+		return true
+	}
+	if C.eglGetConfigs(disp, &configs[0], config_size, &num_config) != C.EGL_TRUE {
+		return false
+	}
+	if numConfig != nil {
+		*numConfig = int(num_config)
+	}
+	return true
+}
+
+func EglChooseConfig(disp EGLDisplay, attribs []EGLint) (EGLConfig, bool) {
 	var cfg C.EGLConfig
 	var ncfg C.EGLint
 	if C.eglChooseConfig(disp, &attribs[0], &cfg, 1, &ncfg) != C.EGL_TRUE {
-		return nilEGLConfig, false
+		return NilEGLConfig, false
 	}
-	return _EGLConfig(cfg), true
+	return EGLConfig(cfg), true
 }
 
-func eglCreateContext(disp _EGLDisplay, cfg _EGLConfig, shareCtx _EGLContext, attribs []_EGLint) _EGLContext {
+func EglCreateContext(disp EGLDisplay, cfg EGLConfig, shareCtx EGLContext, attribs []EGLint) EGLContext {
 	ctx := C.eglCreateContext(disp, cfg, shareCtx, &attribs[0])
-	return _EGLContext(ctx)
+	return EGLContext(ctx)
 }
 
-func eglDestroySurface(disp _EGLDisplay, surf _EGLSurface) bool {
+func EglDestroySurface(disp EGLDisplay, surf EGLSurface) bool {
 	return C.eglDestroySurface(disp, surf) == C.EGL_TRUE
 }
 
-func eglDestroyContext(disp _EGLDisplay, ctx _EGLContext) bool {
+func EglDestroyContext(disp EGLDisplay, ctx EGLContext) bool {
 	return C.eglDestroyContext(disp, ctx) == C.EGL_TRUE
 }
 
-func eglGetConfigAttrib(disp _EGLDisplay, cfg _EGLConfig, attr _EGLint) (_EGLint, bool) {
-	var val _EGLint
+func EglGetConfigAttrib(disp EGLDisplay, cfg EGLConfig, attr EGLint) (EGLint, bool) {
+	var val EGLint
 	ret := C.eglGetConfigAttrib(disp, cfg, attr, &val)
 	return val, ret == C.EGL_TRUE
 }
 
-func eglGetError() _EGLint {
+func EglGetError() EGLint {
 	return C.eglGetError()
 }
 
-func eglInitialize(disp _EGLDisplay) (_EGLint, _EGLint, bool) {
-	var maj, min _EGLint
+func EglInitialize(disp EGLDisplay) (EGLint, EGLint, bool) {
+	var maj, min EGLint
 	ret := C.eglInitialize(disp, &maj, &min)
 	return maj, min, ret == C.EGL_TRUE
 }
 
-func eglMakeCurrent(disp _EGLDisplay, draw, read _EGLSurface, ctx _EGLContext) bool {
+func EglMakeCurrent(disp EGLDisplay, draw, read EGLSurface, ctx EGLContext) bool {
 	return C.eglMakeCurrent(disp, draw, read, ctx) == C.EGL_TRUE
 }
 
-func eglReleaseThread() bool {
+func EglReleaseThread() bool {
 	return C.eglReleaseThread() == C.EGL_TRUE
 }
 
-func eglSwapBuffers(disp _EGLDisplay, surf _EGLSurface) bool {
+func EglSwapBuffers(disp EGLDisplay, surf EGLSurface) bool {
 	return C.eglSwapBuffers(disp, surf) == C.EGL_TRUE
 }
 
-func eglSwapInterval(disp _EGLDisplay, interval _EGLint) bool {
+func EglSwapInterval(disp EGLDisplay, interval EGLint) bool {
 	return C.eglSwapInterval(disp, interval) == C.EGL_TRUE
 }
 
-func eglTerminate(disp _EGLDisplay) bool {
+func EglTerminate(disp EGLDisplay) bool {
 	return C.eglTerminate(disp) == C.EGL_TRUE
 }
 
-func eglQueryString(disp _EGLDisplay, name _EGLint) string {
+func EglQueryString(disp EGLDisplay, name EGLint) string {
 	return C.GoString(C.eglQueryString(disp, name))
 }
 
-func eglGetDisplay(disp NativeDisplayType) _EGLDisplay {
+func EglGetDisplay(disp NativeDisplayType) EGLDisplay {
 	return C.eglGetDisplay(disp)
 }
 
-func eglCreateWindowSurface(disp _EGLDisplay, conf _EGLConfig, win NativeWindowType, attribs []_EGLint) _EGLSurface {
+func EglCreateWindowSurface(disp EGLDisplay, conf EGLConfig, win NativeWindowType, attribs []EGLint) EGLSurface {
 	eglSurf := C.eglCreateWindowSurface(disp, conf, win, &attribs[0])
 	return eglSurf
 }
 
-func eglWaitClient() bool {
+func EglWaitClient() bool {
 	return C.eglWaitClient() == C.EGL_TRUE
 }
