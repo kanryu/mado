@@ -25,6 +25,7 @@ type (
 
 var (
 	libEGL                  = syscall.NewLazyDLL("libEGL.dll")
+	_eglBindAPI             = libEGL.NewProc("eglBindAPI")
 	_eglChooseConfig        = libEGL.NewProc("eglChooseConfig")
 	_eglCreateContext       = libEGL.NewProc("eglCreateContext")
 	_eglCreateWindowSurface = libEGL.NewProc("eglCreateWindowSurface")
@@ -70,6 +71,11 @@ func loadDLL(dll *syscall.LazyDLL, name string) error {
 		return fmt.Errorf("egl: failed to load %s: %v", name, err)
 	}
 	return nil
+}
+
+func eglBindAPI(api uint) bool {
+	r, _, _ := _eglBindAPI.Call(uintptr(api))
+	return r != 0
 }
 
 func eglChooseConfig(disp _EGLDisplay, attribs []_EGLint) (_EGLConfig, bool) {

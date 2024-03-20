@@ -34,6 +34,8 @@ import (
 	iowindow "github.com/kanryu/mado/io/window"
 )
 
+var _ mado.ViewEvent = (*ViewEvent)(nil)
+
 type ViewEvent struct {
 	HWND uintptr
 }
@@ -95,9 +97,13 @@ var resources struct {
 	helperHwnd syscall.Handle
 }
 
-func init() {
+func InitWindows() {
 	mado.OsMain = osMain
 	mado.OsNewWindow = newWindow
+	mado.EnablePollEvents = EnablePollEvents
+	mado.PollEvents = PollEvents
+	mado.GetTimerValue = GetTimerValue
+	mado.GetTimerFrequency = GetTimerFrequency
 }
 
 var withPollEvents bool
@@ -1058,4 +1064,5 @@ func configForDPI(dpi int) unit.Metric {
 	}
 }
 
-func (_ ViewEvent) ImplementsEvent() {}
+func (ViewEvent) ImplementsEvent()     {}
+func (ViewEvent) ImplementsViewEvent() {}
