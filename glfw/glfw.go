@@ -1,10 +1,7 @@
 package glfw
 
 import (
-	"context"
 	"fmt"
-	"os"
-	"os/signal"
 	"sync"
 
 	"github.com/kanryu/mado"
@@ -27,12 +24,12 @@ var theApp *Application
 // Application keeps track of all the windows and global state.
 type Application struct {
 	// Context is used to broadcast application shutdown.
-	Context    context.Context
-	Stop       context.CancelFunc
+	// Context    context.Context
+	// Stop       context.CancelFunc
 	Ctx        mado.Context
 	MainWindow *Window
-	// Shutdown shuts down all windows.
-	Shutdown func()
+	// // Shutdown shuts down all windows.
+	// Shutdown func()
 	// active keeps track the open windows, such that application
 	// can shut down, when all of them are closed.
 	Active sync.WaitGroup
@@ -40,12 +37,13 @@ type Application struct {
 	fJoystickHolder func(joy Joystick, event PeripheralEvent)
 }
 
-func NewApplication(ctx context.Context, stop context.CancelFunc) *Application {
-	ctx, cancel := context.WithCancel(ctx)
+// func NewApplication(ctx context.Context, stop context.CancelFunc) *Application {
+func NewApplication() *Application {
+	// ctx, cancel := context.WithCancel(ctx)
 	return &Application{
-		Context:         ctx,
-		Stop:            stop,
-		Shutdown:        cancel,
+		// Context:         ctx,
+		// Stop:            stop,
+		// Shutdown:        cancel,
 		fJoystickHolder: func(joy Joystick, event PeripheralEvent) {},
 	}
 }
@@ -133,8 +131,9 @@ func Init() error {
 	mado.EnablePollEvents()
 	app.Main()
 
-	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt)
-	theApp = NewApplication(ctx, stop)
+	// ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt)
+	// theApp = NewApplication(ctx, stop)
+	theApp = NewApplication()
 	mado.GlfwConfig.Initialized = true
 	return acceptError(APIUnavailable)
 }
@@ -150,7 +149,7 @@ func Init() error {
 //
 // This function may only be called from the main thread.
 func Terminate() {
-	theApp.Stop()
+	//theApp.Stop()
 	flushErrors()
 }
 
