@@ -66,11 +66,16 @@ func (c *x11Context) Refresh() error {
 	if err := c.Context.CreateSurface(eglSurf, width, height); err != nil {
 		return err
 	}
-	if err := c.Context.MakeCurrent(); err != nil {
-		return err
+	if mado.GlfwConfig.Enable {
+		//		c.Context.EnableVSync(true)
+	} else {
+		if err := c.Context.MakeCurrent(); err != nil {
+			return err
+		}
+		c.Context.EnableVSync(true)
+		c.Context.ReleaseCurrent()
+
 	}
-	c.Context.EnableVSync(true)
-	c.Context.ReleaseCurrent()
 	return nil
 }
 
