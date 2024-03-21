@@ -4,9 +4,9 @@
 package app
 
 import (
-	"github.com/kanryu/mado/mswindows"
+	"github.com/kanryu/mado/windows"
 )
 
 func init() {
-	mswindows.InitWindows()
+	windows.InitWindows()
 }
