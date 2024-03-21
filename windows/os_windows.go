@@ -3,7 +3,7 @@
 //go:build windows
 // +build windows
 
-package mswindows
+package windows
 
 import (
 	"errors"
@@ -22,8 +22,8 @@ import (
 	syscall "golang.org/x/sys/windows"
 
 	"github.com/kanryu/mado"
-	"github.com/kanryu/mado/mswindows/internal/windows"
 	"github.com/kanryu/mado/unit"
+	"github.com/kanryu/mado/windows/internal/windows"
 	gowindows "golang.org/x/sys/windows"
 
 	"github.com/kanryu/mado/f32"

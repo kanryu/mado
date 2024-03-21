@@ -3,7 +3,7 @@
 //go:build windows
 // +build windows
 
-package mswindows
+package windows
 
 import (
 	"fmt"
@@ -18,7 +18,7 @@ import (
 	"github.com/kanryu/mado"
 	"github.com/kanryu/mado/gpu"
 	"github.com/kanryu/mado/internal/gl"
-	"github.com/kanryu/mado/mswindows/internal/windows"
+	"github.com/kanryu/mado/windows/internal/windows"
 	winsyscall "golang.org/x/sys/windows"
 )
 
