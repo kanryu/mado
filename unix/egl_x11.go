@@ -30,6 +30,7 @@ func init() {
 		eglApi := egl.EGL_OPENGL_ES_API
 		if mado.GlfwConfig.Enable {
 			eglApi = egl.EGL_OPENGL_API
+			mado.GlfwConfig.WindowType = mado.WindowTypeX11
 		}
 		ctx, err := NewContext(disp, eglApi)
 		if err != nil {

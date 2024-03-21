@@ -372,7 +372,7 @@ func glfwCreateContext(disp egl.EGLDisplay, eglApi uint) (*eglContext, []egl.EGL
 	}
 
 	// _GLFW_WAYLAND
-	if false {
+	if mado.GlfwConfig.WindowType == mado.WindowTypeWayland {
 		if cfg.EXT_present_opaque {
 			var transparentInt egl.EGLint
 			if !fbconfig.Transparent {
@@ -444,7 +444,7 @@ func chooseEGLConfig(disp egl.EGLDisplay, ctxconfig *mado.CtxConfig, fbconfig *m
 		}
 
 		// _GLFW_X11
-		if true {
+		if mado.GlfwConfig.WindowType == mado.WindowTypeX11 {
 			// Only consider EGLConfigs with associated Visuals
 			if val, ok := egl.EglGetConfigAttrib(disp, n, egl.EGL_NATIVE_VISUAL_ID); ok {
 				if val == 0 {
@@ -501,17 +501,18 @@ func chooseEGLConfig(disp egl.EGLDisplay, ctxconfig *mado.CtxConfig, fbconfig *m
 			u.StencilBits = int(val)
 		}
 
-		// if _GLFW_WAYLAND {
-		// 	// NOTE: The wl_surface opaque region is no guarantee that its buffer
-		// 	//       is presented as opaque, if it also has an alpha channel
-		// 	// HACK: If EGL_EXT_present_opaque is unavailable, ignore any config
-		// 	//       with an alpha channel to ensure the buffer is opaque
-		// 	if !mado.GlfwConfig.PlatformContext.EXT_present_opaque {
-		// 		if !fbconfig.Transparent && u.AlphaBits > 0 {
-		// 			continue
-		// 		}
-		// 	}
-		// }
+		// GLFW_WAYLAND
+		if mado.GlfwConfig.WindowType == mado.WindowTypeWayland {
+			// NOTE: The wl_surface opaque region is no guarantee that its buffer
+			//       is presented as opaque, if it also has an alpha channel
+			// HACK: If EGL_EXT_present_opaque is unavailable, ignore any config
+			//       with an alpha channel to ensure the buffer is opaque
+			if !mado.GlfwConfig.PlatformContext.EXT_present_opaque {
+				if !fbconfig.Transparent && u.AlphaBits > 0 {
+					continue
+				}
+			}
+		}
 		if val, ok := egl.EglGetConfigAttrib(disp, n, egl.EGL_SAMPLES); ok {
 			u.Samples = int(val)
 		}

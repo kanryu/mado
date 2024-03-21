@@ -322,6 +322,9 @@ func init() {
 		priority: 2,
 		name:     "opengl",
 		initializer: func(w *window) (mado.Context, error) {
+			if mado.GlfwConfig.Enable {
+				mado.GlfwConfig.WindowType = mado.WindowTypeWindows
+			}
 			ctx := &glContext{win: w}
 			err := ctx.createContext()
 			return ctx, err

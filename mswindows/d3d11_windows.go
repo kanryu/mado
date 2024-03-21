@@ -34,6 +34,9 @@ func init() {
 			if debugDirectX {
 				flags |= d3d11.CREATE_DEVICE_DEBUG
 			}
+			if mado.GlfwConfig.Enable {
+				mado.GlfwConfig.WindowType = mado.WindowTypeWindows
+			}
 			dev, ctx, _, err := d3d11.CreateDevice(
 				d3d11.DRIVER_TYPE_HARDWARE,
 				flags,

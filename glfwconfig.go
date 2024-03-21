@@ -54,6 +54,11 @@ const (
 	OSMesaContextAPI     = 0x00036003
 	ReleaseBehaviorFlush = 0x00035001
 	ReleaseBehaviorNone  = 0x00035002
+
+	WindowTypeWindows = 0x00040001
+	WindowTypeMac     = 0x00040002
+	WindowTypeX11     = 0x00040003
+	WindowTypeWayland = 0x00040004
 )
 
 var GlfwConfig Library
@@ -151,6 +156,7 @@ type GlfwContext struct {
 type Library struct {
 	Initialized bool
 	Enable      bool
+	WindowType  int
 
 	Hints struct {
 		init        initconfig

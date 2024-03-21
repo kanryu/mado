@@ -84,6 +84,9 @@ func init() {
 }
 
 func newContext(w *window) (*glContext, error) {
+	if mado.GlfwConfig.Enable {
+		mado.GlfwConfig.WindowType = mado.WindowTypeMac
+	}
 	clib := C.CString("/System/Library/Frameworks/OpenGL.framework/OpenGL")
 	defer C.free(unsafe.Pointer(clib))
 	lib, err := C.dlopen(clib, C.RTLD_NOW|C.RTLD_LOCAL)

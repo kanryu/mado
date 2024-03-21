@@ -87,6 +87,9 @@ type mtlContext struct {
 }
 
 func newMtlContext(w *window) (*mtlContext, error) {
+	if mado.GlfwConfig.Enable {
+		mado.GlfwConfig.WindowType = mado.WindowTypeMac
+	}
 	dev := C.createMetalDevice()
 	if dev == 0 {
 		return nil, errors.New("metal: MTLCreateSystemDefaultDevice failed")

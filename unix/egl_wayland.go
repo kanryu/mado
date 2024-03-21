@@ -30,7 +30,7 @@ var _ mado.Context = (*wlContext)(nil)
 
 type wlContext struct {
 	win *window
-	*egl.Context
+	*Context
 	eglWin *C.struct_wl_egl_window
 }
 
@@ -40,8 +40,9 @@ func init() {
 		eglApi := egl.EGL_OPENGL_ES_API
 		if mado.GlfwConfig.Enable {
 			eglApi = egl.EGL_OPENGL_API
+			mado.GlfwConfig.WindowType = mado.WindowTypeWayland
 		}
-		ctx, err := egl.NewContext(disp, eglApi)
+		ctx, err := NewContext(disp, eglApi)
 		if err != nil {
 			return nil, err
 		}
