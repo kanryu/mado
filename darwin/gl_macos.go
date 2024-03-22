@@ -6,10 +6,7 @@ package darwin
 
 import (
 	"errors"
-	"fmt"
 	"runtime"
-	"slices"
-	"strings"
 
 	"unsafe"
 
@@ -113,7 +110,13 @@ func newContext(w *window) (*glContext, error) {
 	}
 	c.Lock()
 	defer c.Unlock()
-	err = c.RefreshContextAttribs(&mado.GlfwConfig.Hints.Context)
+	glfunc, err := gl.NewFunctionsDarwin(nil, false)
+	if err != nil {
+		return nil, err
+	}
+	c.context.GetInteger = func(e gl.Enum) int { return glfunc.GetInteger(e) }
+	c.context.GetString = func(e gl.Enum) string { return glfunc.GetString(e) }
+	err = c.context.RefreshContextAttribs(&mado.GlfwConfig.Hints.Context)
 	if err != nil {
 		return nil, err
 	}
@@ -139,107 +142,107 @@ func newGlContext() C.CFTypeRef {
 	return C.gio_createGLContext2((*C.uint)(unsafe.Pointer(&attribs[0])))
 }
 
-func (c *glContext) RefreshContextAttribs(ctxconfig *mado.CtxConfig) error {
-	f, err := gl.NewFunctions(nil, false)
-	if err != nil {
-		return err
-	}
-	exts := strings.Split(f.GetString(gl.EXTENSIONS), " ")
-	glVer := f.GetString(gl.VERSION)
+// func (c *glContext) RefreshContextAttribs(ctxconfig *mado.CtxConfig) error {
+// 	f, err := gl.NewFunctions(nil, false)
+// 	if err != nil {
+// 		return err
+// 	}
+// 	exts := strings.Split(f.GetString(gl.EXTENSIONS), " ")
+// 	glVer := f.GetString(gl.VERSION)
 
-	prefixes := []string{
-		"OpenGL ES-CM ",
-		"OpenGL ES-CL ",
-		"OpenGL ES ",
-	}
-	for _, pref := range prefixes {
-		if glVer[:len(pref)] == pref {
-			c.context.Client = mado.GLFW_OPENGL_ES_API
-		}
-	}
-	ver, _, err := gl.ParseGLVersion(glVer)
-	if err != nil {
-		return err
-	}
-	c.context.Major, c.context.Minor = ver[0], ver[1]
-	if c.context.Major < ctxconfig.Major ||
-		(c.context.Major == ctxconfig.Major &&
-			c.context.Minor < ctxconfig.Minor) {
-		// The desired OpenGL version is greater than the actual version
-		// This only happens if the machine lacks {GLX|WGL}_ARB_create_context
-		// /and/ the user has requested an OpenGL version greater than 1.0
+// 	prefixes := []string{
+// 		"OpenGL ES-CM ",
+// 		"OpenGL ES-CL ",
+// 		"OpenGL ES ",
+// 	}
+// 	for _, pref := range prefixes {
+// 		if glVer[:len(pref)] == pref {
+// 			c.context.Client = mado.GLFW_OPENGL_ES_API
+// 		}
+// 	}
+// 	ver, _, err := gl.ParseGLVersion(glVer)
+// 	if err != nil {
+// 		return err
+// 	}
+// 	c.context.Major, c.context.Minor = ver[0], ver[1]
+// 	if c.context.Major < ctxconfig.Major ||
+// 		(c.context.Major == ctxconfig.Major &&
+// 			c.context.Minor < ctxconfig.Minor) {
+// 		// The desired OpenGL version is greater than the actual version
+// 		// This only happens if the machine lacks {GLX|WGL}_ARB_create_context
+// 		// /and/ the user has requested an OpenGL version greater than 1.0
 
-		// For API consistency, we emulate the behavior of the
-		// {GLX|WGL}_ARB_create_context extension and fail here
+// 		// For API consistency, we emulate the behavior of the
+// 		// {GLX|WGL}_ARB_create_context extension and fail here
 
-		if c.context.Client == mado.GLFW_OPENGL_API {
-			return fmt.Errorf("Requested OpenGL version %i.%i, got version %i.%i",
-				ctxconfig.Major, ctxconfig.Minor,
-				c.context.Major, c.context.Minor,
-			)
-		} else {
-			return fmt.Errorf("Requested OpenGL ES version %i.%i, got version %i.%i",
-				ctxconfig.Major, ctxconfig.Minor,
-				c.context.Major, c.context.Minor,
-			)
-		}
-	}
-	// Read back context flags (OpenGL 3.0 and above)
-	if c.context.Major >= 3 {
-		flags := f.GetInteger(gl.CONTEXT_FLAGS)
-		if flags&gl.CONTEXT_FLAG_FORWARD_COMPATIBLE_BIT != 0 {
-			c.context.Forward = true
-		}
-		if flags&gl.CONTEXT_FLAG_DEBUG_BIT != 0 {
-			c.context.Debug = true
-		} else if slices.Contains(exts, "GL_ARB_debug_output") && ctxconfig.Debug {
-			// HACK: This is a workaround for older drivers (pre KHR_debug)
-			//       not setting the debug bit in the context flags for
-			//       debug contexts
-			c.context.Debug = true
-		}
-		if flags&gl.CONTEXT_FLAG_NO_ERROR_BIT_KHR != 0 {
-			c.context.Noerror = true
-		}
-	}
-	// Read back OpenGL context profile (OpenGL 3.2 and above)
-	if c.context.Major >= 4 ||
-		(c.context.Major == 3 && c.context.Minor >= 2) {
-		mask := f.GetInteger(gl.CONTEXT_PROFILE_MASK)
-		if mask&gl.CONTEXT_COMPATIBILITY_PROFILE_BIT != 0 {
-			c.context.Profile = mado.GLFW_OPENGL_COMPAT_PROFILE
-		} else if mask&gl.CONTEXT_CORE_PROFILE_BIT != 0 {
-			c.context.Profile = mado.GLFW_OPENGL_CORE_PROFILE
-		} else if slices.Contains(exts, "GL_ARB_compatibility") {
-			// HACK: This is a workaround for the compatibility profile bit
-			//       not being set in the context flags if an OpenGL 3.2+
-			//       context was created without having requested a specific
-			//       version
-			c.context.Profile = mado.GLFW_OPENGL_COMPAT_PROFILE
-		}
-	}
+// 		if c.context.Client == mado.GLFW_OPENGL_API {
+// 			return fmt.Errorf("Requested OpenGL version %i.%i, got version %i.%i",
+// 				ctxconfig.Major, ctxconfig.Minor,
+// 				c.context.Major, c.context.Minor,
+// 			)
+// 		} else {
+// 			return fmt.Errorf("Requested OpenGL ES version %i.%i, got version %i.%i",
+// 				ctxconfig.Major, ctxconfig.Minor,
+// 				c.context.Major, c.context.Minor,
+// 			)
+// 		}
+// 	}
+// 	// Read back context flags (OpenGL 3.0 and above)
+// 	if c.context.Major >= 3 {
+// 		flags := f.GetInteger(gl.CONTEXT_FLAGS)
+// 		if flags&gl.CONTEXT_FLAG_FORWARD_COMPATIBLE_BIT != 0 {
+// 			c.context.Forward = true
+// 		}
+// 		if flags&gl.CONTEXT_FLAG_DEBUG_BIT != 0 {
+// 			c.context.Debug = true
+// 		} else if slices.Contains(exts, "GL_ARB_debug_output") && ctxconfig.Debug {
+// 			// HACK: This is a workaround for older drivers (pre KHR_debug)
+// 			//       not setting the debug bit in the context flags for
+// 			//       debug contexts
+// 			c.context.Debug = true
+// 		}
+// 		if flags&gl.CONTEXT_FLAG_NO_ERROR_BIT_KHR != 0 {
+// 			c.context.Noerror = true
+// 		}
+// 	}
+// 	// Read back OpenGL context profile (OpenGL 3.2 and above)
+// 	if c.context.Major >= 4 ||
+// 		(c.context.Major == 3 && c.context.Minor >= 2) {
+// 		mask := f.GetInteger(gl.CONTEXT_PROFILE_MASK)
+// 		if mask&gl.CONTEXT_COMPATIBILITY_PROFILE_BIT != 0 {
+// 			c.context.Profile = mado.GLFW_OPENGL_COMPAT_PROFILE
+// 		} else if mask&gl.CONTEXT_CORE_PROFILE_BIT != 0 {
+// 			c.context.Profile = mado.GLFW_OPENGL_CORE_PROFILE
+// 		} else if slices.Contains(exts, "GL_ARB_compatibility") {
+// 			// HACK: This is a workaround for the compatibility profile bit
+// 			//       not being set in the context flags if an OpenGL 3.2+
+// 			//       context was created without having requested a specific
+// 			//       version
+// 			c.context.Profile = mado.GLFW_OPENGL_COMPAT_PROFILE
+// 		}
+// 	}
 
-	// Read back robustness strategy
-	if slices.Contains(exts, "GL_ARB_robustness") {
-		// NOTE: We avoid using the context flags for detection, as they are
-		//       only present from 3.0 while the extension applies from 1.1
-		strategy := f.GetInteger(gl.RESET_NOTIFICATION_STRATEGY_ARB)
-		if strategy == gl.LOSE_CONTEXT_ON_RESET_ARB {
-			c.context.Robustness = mado.GLFW_LOSE_CONTEXT_ON_RESET
-		} else if strategy == gl.NO_RESET_NOTIFICATION_ARB {
-			c.context.Robustness = mado.GLFW_NO_RESET_NOTIFICATION
-		}
-	}
-	if slices.Contains(exts, "GL_KHR_context_flush_control") {
-		behavior := f.GetInteger(gl.CONTEXT_RELEASE_BEHAVIOR)
-		if behavior == gl.ZERO {
-			c.context.Release = mado.GLFW_RELEASE_BEHAVIOR_NONE
-		} else if behavior == gl.CONTEXT_RELEASE_BEHAVIOR_FLUSH {
-			c.context.Release = mado.GLFW_RELEASE_BEHAVIOR_FLUSH
-		}
-	}
-	return nil
-}
+// 	// Read back robustness strategy
+// 	if slices.Contains(exts, "GL_ARB_robustness") {
+// 		// NOTE: We avoid using the context flags for detection, as they are
+// 		//       only present from 3.0 while the extension applies from 1.1
+// 		strategy := f.GetInteger(gl.RESET_NOTIFICATION_STRATEGY_ARB)
+// 		if strategy == gl.LOSE_CONTEXT_ON_RESET_ARB {
+// 			c.context.Robustness = mado.GLFW_LOSE_CONTEXT_ON_RESET
+// 		} else if strategy == gl.NO_RESET_NOTIFICATION_ARB {
+// 			c.context.Robustness = mado.GLFW_NO_RESET_NOTIFICATION
+// 		}
+// 	}
+// 	if slices.Contains(exts, "GL_KHR_context_flush_control") {
+// 		behavior := f.GetInteger(gl.CONTEXT_RELEASE_BEHAVIOR)
+// 		if behavior == gl.ZERO {
+// 			c.context.Release = mado.GLFW_RELEASE_BEHAVIOR_NONE
+// 		} else if behavior == gl.CONTEXT_RELEASE_BEHAVIOR_FLUSH {
+// 			c.context.Release = mado.GLFW_RELEASE_BEHAVIOR_FLUSH
+// 		}
+// 	}
+// 	return nil
+// }
 
 func (c *glContext) RenderTarget() (gpu.RenderTarget, error) {
 	return gpu.OpenGLRenderTarget{}, nil
